@@ -13,7 +13,7 @@
       "name": "site-audit",
       "source": "./plugins/site-audit",
       "description": "Pre-launch and regression audit of a website: SEO, Core Web Vitals, accessibility, responsiveness, semantic HTML. Audits every page type, writes a tracked was→now checklist and re-checks it later.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "category": "development",
       "tags": ["web", "audit", "seo", "accessibility", "performance", "lighthouse", "nextjs", "qa"]
     },

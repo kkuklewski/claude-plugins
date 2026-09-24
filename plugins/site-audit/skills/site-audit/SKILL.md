@@ -71,6 +71,7 @@ Only what scripts can't judge — on the home page (shared layout) plus any temp
 - For the biggest perf problem, find the cause, not just the metric: HTML weight in `http.txt`, LCP element,
   request mix in `pages.md`; check recent config commits (`git log -p -5 -- next.config.*`) for regressions.
 - Next.js version matters (`code-scan.txt` prints it: 16+ → `<Image preload>`, `proxy.ts`). Unsure about an API → Context7 `/vercel/next.js`.
+- Rank fixes by payoff with [references/what-moves-the-score.md](references/what-moves-the-score.md) (measured wins, dead ends, known false positives).
 - Contrast rows carry a suggested passing colour (`→ try #xxxxxx`); brand colours usually need the client's OK → mark ⏸.
 
 ### 4. Report
