@@ -1,0 +1,13 @@
+{
+  "name": "site-audit",
+  "description": "Pre-launch and regression quality audit of a website (Next.js-first, works on any URL): SEO, performance and Core Web Vitals, accessibility, responsiveness, semantic HTML, fonts, images, third-party scripts and consent. Audits one sample of every page type, runs a code scan, HTTP checks, a headless multi-page DOM audit and median-of-3 Lighthouse in one command, and keeps a tracked was→now checklist in your repo.",
+  "version": "0.2.0",
+  "author": {
+    "name": "Kamil Kuklewski",
+    "url": "https://github.com/kkuklewski"
+  },
+  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/site-audit",
+  "repository": "https://github.com/kkuklewski/claude-plugins",
+  "license": "MIT",
+  "keywords": ["claude-code", "skills", "web", "audit", "seo", "accessibility", "lighthouse", "core-web-vitals", "nextjs"]
+}

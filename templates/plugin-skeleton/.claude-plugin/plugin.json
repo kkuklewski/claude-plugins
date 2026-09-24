@@ -1,0 +1,10 @@
+{
+  "name": "__NAME__",
+  "description": "__DESCRIPTION__",
+  "version": "0.1.0",
+  "author": { "name": "Kamil Kuklewski", "url": "https://github.com/kkuklewski" },
+  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/__NAME__",
+  "repository": "https://github.com/kkuklewski/claude-plugins",
+  "license": "MIT",
+  "keywords": ["claude-code", "skills"]
+}

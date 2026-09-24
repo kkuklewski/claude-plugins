@@ -1,0 +1,17 @@
+{
+  "$comment": "Copy to <repo>/.site-audit.json. Every key is optional.",
+  "reportDir": "docs/audit",
+  "localUrl": "http://localhost:3000",
+  "launchConfig": "web-prod",
+  "sourceDirs": ["src"],
+  "ignorePaths": ["legacy-export/**", "static-mockups/**"],
+  "privateRoutes": ["/admin", "/checkout"],
+  "pages": ["/blog/example-post", "/locations/berlin"],
+  "maxPages": 12,
+  "viewports": [375, 1440],
+  "accepted": [
+    { "id": "2.2", "match": "title length", "reason": "existing title ranks well, keep as is" },
+    { "id": "2.11", "match": "app.example.com", "reason": "sign-up flow opens in the same tab on purpose" },
+    { "id": "5.6", "match": "#3aa76d", "reason": "brand colour — waiting for client approval", "until": "2026-12-31" }
+  ]
+}

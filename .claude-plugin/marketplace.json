@@ -1,0 +1,31 @@
+{
+  "name": "kkuklewski",
+  "owner": {
+    "name": "Kamil Kuklewski",
+    "url": "https://github.com/kkuklewski"
+  },
+  "metadata": {
+    "description": "Kamil Kuklewski's Claude Code plugins: practical skills for web development, QA and AI-assisted engineering.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "site-audit",
+      "source": "./plugins/site-audit",
+      "description": "Pre-launch and regression audit of a website: SEO, Core Web Vitals, accessibility, responsiveness, semantic HTML. Audits every page type, writes a tracked was→now checklist and re-checks it later.",
+      "version": "0.2.0",
+      "category": "development",
+      "tags": ["web", "audit", "seo", "accessibility", "performance", "lighthouse", "nextjs", "qa"]
+    },
+    {
+      "name": "ladder-adoption",
+      "source": {
+        "source": "github",
+        "repo": "kkuklewski/ladder-adoption"
+      },
+      "description": "Find your rung on the Steps of AI Adoption and the next one up; incident-response loop to earn the next rung.",
+      "category": "productivity",
+      "tags": ["adoption", "maturity", "assessment", "incident-response"]
+    }
+  ]
+}
