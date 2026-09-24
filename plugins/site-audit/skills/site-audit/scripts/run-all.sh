@@ -21,7 +21,9 @@ VA=(); [ -n "$VP" ] && VA=(--viewports "$VP")
 T0=$(date +%s)
 
 # dev-build guard: perf numbers from `next dev` are meaningless
-if curl -sS -m 15 -L "$URL" 2>/dev/null | grep -q 'react-refresh\|webpack-hmr\|__nextDevTools\|/_next/static/chunks/webpack.js\|turbopack-hmr'; then
+# (script URLs only — production HTML/RSC payloads can contain these words as text)
+PAGE_HTML=$(curl -sS -m 15 -L "$URL" 2>/dev/null)
+if printf '%s' "$PAGE_HTML" | grep -oE '<script[^>]+src="[^"]+"' | grep -qE 'react-refresh|hmr-client|webpack-hmr|next-devtools|_dev_|/_next/static/chunks/(main-app|webpack|app-pages-internals|app/layout)\.js("|\?)' || printf '%s' "$PAGE_HTML" | grep -q '"buildId":"development"'; then
   echo "!! $URL looks like a DEV server — Lighthouse performance will be wrong. Use a production build (next build && next start) or the deployed URL." | tee "$OUT/WARNING.txt"
 fi
 

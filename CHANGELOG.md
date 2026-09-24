@@ -1,5 +1,11 @@
 # Changelog
 
+## site-audit 0.2.2 — 2026-09-25
+- Dev-build detection uses script URLs, the dev overlay and `buildId` only (no false "dev build" on production pages).
+- Contrast skips text sitting on photos/videos/background images and text that is translucent or animating; waits for finite animations to finish before sampling.
+- Visible focus is measured (real Tab keypress, then each control focused and its styles compared) instead of guessed from CSS selectors.
+- Fixture tests cover all three.
+
 ## site-audit 0.2.1 — 2026-09-24
 - New `references/what-moves-the-score.md`: typical before/after ranges from real Next.js sites, ranked fixes, dead ends and known false positives. SKILL.md points to it when verifying findings.
 

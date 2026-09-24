@@ -12,8 +12,8 @@ node -e '
 const {issues}=JSON.parse(require("fs").readFileSync(process.argv[1]+"/pages-issues.json","utf8"));
 const on=(page)=>new Set(issues.filter(i=>i.pages.includes(page)).map(i=>i.id));
 const bad=on("/bad.html"), good=on("/good.html");
-const mustFire=["1.12","2.3","2.8","2.9","1.14","2.10","3.7","5.6","5.8","5.9","5.10","5.3","4.4"];
-const mustNotFireOnGood=["1.12","2.2","2.3","2.8","2.9","1.14","5.3","5.6","5.8","5.9","5.10","4.4"];
+const mustFire=["5.1","1.12","2.3","2.8","2.9","1.14","2.10","3.7","5.6","5.8","5.9","5.10","5.3","4.4"];
+const mustNotFireOnGood=["1.8","5.1","1.12","2.2","2.3","2.8","2.9","1.14","5.3","5.6","5.8","5.9","5.10","4.4"];
 let fail=0;
 for(const id of mustFire) if(!bad.has(id)){console.log("FAIL bad.html: expected",id);fail++}
 for(const id of mustNotFireOnGood) if(good.has(id)){console.log("FAIL good.html: unexpected",id,issues.find(i=>i.id===id&&i.pages.includes("/good.html")).msg);fail++}

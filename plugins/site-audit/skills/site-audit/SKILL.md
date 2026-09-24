@@ -65,6 +65,8 @@ Only what scripts can't judge — on the home page (shared layout) plus any temp
   lazy images paint late (a blank box is usually timing, not a bug). Reset with `resize_window preset: desktop`.
 - **200 % text:** `document.documentElement.style.fontSize='200%'` → screenshot → nothing clipped → reset.
 - Pitfall: with `srcset`, `img.naturalWidth` is density-scaled — judge served size from `?w=` / the network, not naturalWidth.
+- When pasting `dom-audit.js` into the in-app browser, press Tab once first — without a keyboard event Chrome
+  won't apply `:focus-visible` to programmatic focus, so the focus check reports "could not be put in :focus-visible state".
 
 ### 3. Verify before you report
 - Code-scan hits are leads: open the file before calling it a failure.

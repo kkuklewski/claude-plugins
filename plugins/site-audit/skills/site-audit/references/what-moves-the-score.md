@@ -45,9 +45,12 @@ Insights for the same build. Compare like with like: same tool, same machine, sa
 - Headless hidden panes don't run `requestAnimationFrame`/smooth scroll — verify interactive widgets in Playwright.
 - Check every page type × 375 and 1440 px, plus keyboard, after replacing a carousel or animation library.
 
-## Tool false positives seen (re-check by eye before "fixing")
+## Tool false positives seen (fixed in 0.2.2 — re-check by eye if they reappear)
 
-- "dev build detected" on a production URL when the HTML embeds framework dev strings.
-- Contrast "white on off-white 1.1:1" for text sitting on a photo or gradient (background detection stops at the
-  first opaque ancestor), and for text mid-reveal.
-- `focus:outline-none` reported even when `focus-visible:` styles replace it.
+- "dev build detected" on a production URL when the HTML text contained framework dev strings → now decided
+  from script URLs, the dev overlay and `buildId` only.
+- Contrast failures for text on a photo/gradient (background detection stopped at the first opaque ancestor)
+  and for text caught mid-fade → text over media layers and translucent/animating text are now skipped,
+  and finite animations are allowed to finish before sampling.
+- `focus:outline-none` flagged although `focus-visible:` styles replace it → focus is now measured: each
+  control is focused after a real Tab keypress and its styles compared.

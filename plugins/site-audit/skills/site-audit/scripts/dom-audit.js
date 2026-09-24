@@ -29,6 +29,11 @@
     } catch { resolve(null); }
   });
   const lcpEl = lcp?.element;
+  // let finite animations (scroll reveals, fades) finish so nothing is sampled mid-transition
+  try {
+    const finite = document.getAnimations().filter((a) => a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming?.().endTime));
+    await Promise.race([Promise.all(finite.map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 2500))]);
+  } catch {}
   const nav = performance.getEntriesByType('navigation')[0];
 
   // --- SEO / head
@@ -47,7 +52,15 @@
     favicon: $$('link[rel~="icon"]').map((l) => l.getAttribute('href')),
     appleTouchIcon: document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href') ?? null,
     manifest: document.querySelector('link[rel="manifest"]')?.getAttribute('href') ?? null,
-    isDevBuild: !!document.querySelector('script[src*="webpack.js"], script[src*="react-refresh"], nextjs-portal') || /_next\/static\/chunks\/.*(dev|turbopack)/.test($$('script[src]').map(s => s.src).join(' ')),
+    // dev = dev overlay element, HMR/refresh script URLs, unhashed dev chunks, or buildId "development".
+    // Never match page text: production HTML/RSC payloads can contain these words.
+    isDevBuild: (() => {
+      const srcs = $$('script[src]').map((s) => s.getAttribute('src') || '');
+      return !!document.querySelector('nextjs-portal, [data-nextjs-dev-overlay], [data-nextjs-toast]')
+        || srcs.some((u) => /react-refresh|hmr-client|webpack-hmr|next-devtools|_dev_|\/__nextjs_/.test(u))
+        || srcs.some((u) => /\/_next\/static\/chunks\/(main-app|webpack|app-pages-internals|app\/layout)\.js(\?|$)/.test(u))
+        || window.__NEXT_DATA__?.buildId === 'development';
+    })(),
   };
 
   // --- headings
@@ -214,8 +227,22 @@
     }
     return null;
   };
+  // media layers (photos, video, canvas, background images/gradients) that text may sit on
+  const docRect = (e) => { const r = e.getBoundingClientRect(); return { l: r.left + scrollX, t: r.top + scrollY, r: r.right + scrollX, b: r.bottom + scrollY }; };
+  const layers = $$('img,video,canvas,picture,svg image,iframe,*').filter((e) => {
+    if (/^(IMG|VIDEO|CANVAS|PICTURE|IMAGE|IFRAME)$/i.test(e.tagName)) return visible(e);
+    return getComputedStyle(e).backgroundImage !== 'none' && visible(e);
+  }).map((e) => ({ e, ...docRect(e) })).filter((x) => x.r - x.l > 40 && x.b - x.t > 40).slice(0, 400);
+  const opaqueHost = (el) => { for (let e = el; e; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c && c.a > 0.9) return e; } return document.documentElement; };
+  const overMedia = (el) => {
+    const r = docRect(el); const x = (r.l + r.r) / 2, y = (r.t + r.b) / 2; const host = opaqueHost(el);
+    return layers.some((L) => L.e !== el && !L.e.contains(el) && !el.contains(L.e) && (host === L.e || host.contains(L.e))
+      && x >= L.l && x <= L.r && y >= L.t && y <= L.b);
+  };
+  const animating = new Set(document.getAnimations().filter((a) => a.playState === 'running').map((a) => a.effect?.target).filter(Boolean));
+  const transient = (el) => { let o = 1; for (let e = el; e; e = e.parentElement) { if (animating.has(e)) return true; o *= +getComputedStyle(e).opacity; } return o < 0.99; };
   const pairs = new Map();
-  let checked = 0, skippedOverImage = 0;
+  let checked = 0, skippedOverImage = 0, skippedTransient = 0;
   for (const el of $$('body *')) {
     if (checked > 2000) break;
     if (!Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
@@ -224,7 +251,8 @@
     const cs = getComputedStyle(el);
     const fg = parse(cs.color); const bg = bgOf(el);
     if (!fg) continue;
-    if (!bg) { skippedOverImage++; continue; }
+    if (!bg || overMedia(el)) { skippedOverImage++; continue; }
+    if (transient(el)) { skippedTransient++; continue; }
     const blended = { r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a) };
     const [L1, L2] = [lum(blended), lum(bg)].sort((a, b) => b - a);
     const ratio = (L1 + 0.05) / (L2 + 0.05);
@@ -239,7 +267,31 @@
     }
   }
   const fails = [...pairs.values()].sort((a, b) => b.count - a.count);
-  const contrast = { checked, skippedOverImage, failingElements: fails.reduce((a, p) => a + p.count, 0), fails: fails.slice(0, 12) };
+  const contrast = { checked, skippedOverImage, skippedTransient, failingElements: fails.reduce((a, p) => a + p.count, 0), fails: fails.slice(0, 12) };
+
+  // --- visible focus: focus each control and compare its styles (CSS-selector heuristics misfire on
+  // `focus:outline-none` + `focus-visible:ring` pairs). Transitions are frozen so we read end state.
+  const focusCheck = (() => {
+    const kill = document.createElement('style');
+    kill.textContent = '*,*::before,*::after{transition:none!important;animation-duration:0s!important}';
+    document.head.appendChild(kill);
+    const props = ['outlineStyle', 'outlineWidth', 'outlineColor', 'boxShadow', 'borderTopColor', 'borderBottomColor', 'backgroundColor', 'color', 'textDecorationLine', 'transform'];
+    const snap = (e) => { if (!e) return ''; const out = []; for (const pe of [null, '::before', '::after']) { const s = getComputedStyle(e, pe); out.push(props.map((k) => s[k]).join('|')); } return out.join('#'); };
+    const targets = $$('a[href],button,input:not([type="hidden"]),select,textarea,summary,[tabindex]:not([tabindex="-1"])').filter((e) => visible(e) && !e.disabled).slice(0, 60);
+    const prev = document.activeElement; prev?.blur?.(); // an already-focused element would snapshot its focus style as 'before'
+    const none = []; let tested = 0, notVisibleMode = 0;
+    for (const el of targets) {
+      const b = snap(el), bp = snap(el.parentElement);
+      try { el.focus({ preventScroll: true, focusVisible: true }); } catch { el.focus({ preventScroll: true }); }
+      if (document.activeElement !== el) continue;
+      if (!el.matches(':focus-visible')) { notVisibleMode++; el.blur(); continue; }
+      tested++;
+      if (snap(el) === b && snap(el.parentElement) === bp) none.push(`${short(el)} "${text(el)}"`);
+      el.blur();
+    }
+    kill.remove(); try { prev?.focus?.({ preventScroll: true }); } catch {}
+    return { tested, noVisibleFocus: cap(none), note: notVisibleMode ? `${notVisibleMode} elements could not be put in :focus-visible state (pointer used?) — verify with Tab` : null };
+  })();
 
   // --- responsiveness at current width
   const vw = document.documentElement.clientWidth;
@@ -269,7 +321,7 @@
     seo, headings, landmarks, images, perf,
     scripts: { total: scripts.length, thirdParty, blockingInHead },
     fonts, css, links: linkReport,
-    a11y: { unnamedInteractive: cap(unnamed), unlabelledFields: cap(unlabelled), skipLink, widgets, contrast },
+    a11y: { unnamedInteractive: cap(unnamed), unlabelledFields: cap(unlabelled), skipLink, widgets, contrast, focusCheck },
     responsive, privacy,
   };
 })()

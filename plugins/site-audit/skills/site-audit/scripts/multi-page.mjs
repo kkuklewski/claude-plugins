@@ -60,7 +60,7 @@ function issuesOf(r, vw) {
   if (f.googleFontsLinks.length) add('1.10', 'I', 'Google Fonts loaded via <link> (use next/font)', f.googleFontsLinks);
   if (css.rootFontSizePx) add('5.7', 'C', `html/:root font-size set in px (${css.rootFontSizePx}) — overrides user setting`);
   if (css.pxFontSizeRules.count) add('1.2', 'M', `${css.pxFontSizeRules.count} CSS rules with px font-size (heuristic)`, css.pxFontSizeRules.items);
-  if (css.focusOutlineRemoved.count) add('5.1', 'I', 'focus outline removed without :focus-visible alternative (verify with keyboard)', css.focusOutlineRemoved.items);
+  if (a.focusCheck?.noVisibleFocus.count) add('5.1', 'C', `${a.focusCheck.noVisibleFocus.count} focusable elements show no visible change on keyboard focus`, a.focusCheck.noVisibleFocus.items);
   if (ln.blankWithoutNoopener.count) add('2.11', 'M', 'target=_blank without rel=noopener', ln.blankWithoutNoopener.items);
   if (ln.emptyHref.count) add('5.8', 'M', 'links with empty/# href', ln.emptyHref.items);
   if (a.unnamedInteractive.count) add('5.8', 'I', `${a.unnamedInteractive.count} buttons/links without accessible name`, a.unnamedInteractive.items);
@@ -97,6 +97,8 @@ async function auditPage(chrome, url, width) {
     await sleep(800);
     // scroll through the page so lazy content renders, then back to top (screenshots-before-paint lesson)
     await tab.send('Runtime.evaluate', { awaitPromise: true, expression: `(async()=>{for(let y=0;y<document.body.scrollHeight;y+=innerHeight*0.8){scrollTo(0,y);await new Promise(r=>setTimeout(r,120));}scrollTo(0,0);await new Promise(r=>setTimeout(r,300));})()` });
+    // one real Tab keypress: Chrome only lets programmatic focus match :focus-visible after keyboard input
+    for (const type of ['keyDown', 'keyUp']) await tab.send('Input.dispatchKeyEvent', { type, key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
     const res = await tab.send('Runtime.evaluate', { expression: AUDIT, awaitPromise: true, returnByValue: true, timeout: 30000 });
     if (res.exceptionDetails) throw new Error(res.exceptionDetails.exception?.description || res.exceptionDetails.text);
     return { ...res.result.value, consoleErrors: [...new Set(consoleErrors)].slice(0, 10) };

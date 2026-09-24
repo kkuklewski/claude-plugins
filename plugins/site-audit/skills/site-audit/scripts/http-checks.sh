@@ -79,5 +79,5 @@ for A in $JS $CSS; do
   echo "  lines: $LINES  (a few lines = minified; hundreds+ = dev build or not minified)"
 done
 [ -z "$JS$CSS" ] && echo "no /_next/static assets found — not a Next.js page, or assets on a CDN domain"
-printf '%s' "$HTML" | grep -q 'react-refresh\|webpack-hmr\|__nextDevTools\|/_next/static/chunks/webpack.js' && echo "!! Looks like a DEV build (next dev) — perf numbers are not representative"
+{ printf '%s' "$HTML" | grep -oE '<script[^>]+src="[^"]+"' | grep -qE 'react-refresh|hmr-client|webpack-hmr|next-devtools|_dev_|/_next/static/chunks/(main-app|webpack|app-pages-internals|app/layout)\.js("|\?)' || printf '%s' "$HTML" | grep -q '"buildId":"development"'; } && echo "!! Looks like a DEV build (next dev) — perf numbers are not representative"
 exit 0
