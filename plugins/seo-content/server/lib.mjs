@@ -132,8 +132,12 @@ async function dfs(login, password, path, task) {
   const body = await res.json().catch(() => ({}));
   if (res.status === 401 || body.status_code === 40100) throw new SetupError('DataForSEO rejected the login/password.', 'Use the API credentials from app.dataforseo.com → API Access (not your website password).');
   if (body.status_code === 40200 || body.status_code === 40210) throw new SetupError('DataForSEO balance is empty.', 'Top up your DataForSEO account.');
+  if (/verify your account/i.test(body.status_message || '')) throw new SetupError('DataForSEO account is not verified.', 'Complete verification at app.dataforseo.com, then retry.');
   const t = body.tasks?.[0];
-  if (!t || t.status_code >= 40000) throw new Error(`DataForSEO ${path}: ${t?.status_message || body.status_message || res.status}`);
+  if (!t || t.status_code >= 40000) {
+    if (/verify your account/i.test(t?.status_message || '')) throw new SetupError('DataForSEO account is not verified.', 'Complete verification at app.dataforseo.com, then retry.');
+    throw new Error(`DataForSEO ${path}: ${t?.status_message || body.status_message || res.status}`);
+  }
   return { cost: t.cost, result: t.result?.[0] };
 }
 
