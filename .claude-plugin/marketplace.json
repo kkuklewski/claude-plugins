@@ -26,6 +26,14 @@
       "description": "Find your rung on the Steps of AI Adoption and the next one up; incident-response loop to earn the next rung.",
       "category": "productivity",
       "tags": ["adoption", "maturity", "assessment", "incident-response"]
+    },
+    {
+      "name": "seo-content",
+      "source": "./plugins/seo-content",
+      "description": "Turn Google Search Console data into content opportunities and review-ready blog drafts — quick wins, cannibalisation, decaying pages, optional competitor gaps — without a Semrush/Ahrefs subscription. Every user brings their own keys.",
+      "version": "0.1.0",
+      "category": "development",
+      "tags": ["seo", "search-console", "ga4", "content", "blog", "dataforseo", "mcp"]
     }
   ]
 }

@@ -1,0 +1,33 @@
+{
+  "name": "seo-content",
+  "description": "Turn Google Search Console data into content opportunities and review-ready blog drafts — quick wins, cannibalisation, decaying pages, optional competitor gaps — without a Semrush/Ahrefs subscription. Every user brings their own keys.",
+  "version": "0.1.0",
+  "author": { "name": "Kamil Kuklewski", "url": "https://github.com/kkuklewski" },
+  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/seo-content",
+  "repository": "https://github.com/kkuklewski/claude-plugins",
+  "license": "MIT",
+  "keywords": ["claude-code", "skills", "seo", "search-console", "ga4", "content", "blog", "dataforseo", "mcp"],
+  "userConfig": {
+    "google_key_file": {
+      "type": "string",
+      "title": "Google service-account key file",
+      "description": "Absolute path to YOUR service-account JSON key (from your own Google Cloud project). The file stays on your machine; add its client_email as a user in Search Console (and GA4, optional).",
+      "required": true
+    },
+    "dataforseo_login": {
+      "type": "string",
+      "title": "DataForSEO API login (optional)",
+      "description": "Your own DataForSEO API login — enables competitor gaps, search volume and SERP snapshots (pay-as-you-go). Leave empty to use Search Console only.",
+      "required": false,
+      "default": ""
+    },
+    "dataforseo_password": {
+      "type": "string",
+      "title": "DataForSEO API password (optional)",
+      "description": "Your own DataForSEO API password. Stored in your OS keychain.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    }
+  }
+}

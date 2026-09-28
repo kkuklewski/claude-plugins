@@ -1,0 +1,21 @@
+{
+  "siteUrl": "sc-domain:example.com",
+  "siteOrigin": "https://www.example.com",
+  "ga4PropertyId": "",
+  "country": "",
+  "locale": { "location_code": 2840, "language_code": "en" },
+  "brandTerms": ["example"],
+  "competitors": [],
+  "minImpressions": 50,
+  "outputDir": "docs/seo",
+  "blog": {
+    "path": "/blog/",
+    "language": "en",
+    "audience": "Who reads the blog and what they already know",
+    "voice": "Tone of voice in one or two sentences, e.g. plain, practical, no hype",
+    "wordCount": [900, 1600],
+    "cta": "What a reader should do next (link or action)",
+    "avoidTopics": [],
+    "reviewers": ["content team"]
+  }
+}

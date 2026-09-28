@@ -1,5 +1,11 @@
 # Changelog
 
+## seo-content 0.1.0 — 2026-09-28
+- New plugin: `/seo-gaps` (Search Console → ranked opportunities → content briefs) and `/blog-draft` (brief → review-ready draft with `[VERIFY]` markers and a reviewer checklist).
+- Bundled zero-dependency MCP server: Search Console, GA4 Data API, optional DataForSEO (competitor gaps, volume, SERP snapshot).
+- Per-user credentials via plugin `userConfig` (DataForSEO password in the OS keychain; Google key stays a local file); per-site settings in a committed `.seo-content.json` without secrets.
+- `setup_check` explains exactly what's missing (API not enabled, service account not added to the property, wrong key type).
+
 ## site-audit 0.2.2 — 2026-09-25
 - Dev-build detection uses script URLs, the dev overlay and `buildId` only (no false "dev build" on production pages).
 - Contrast skips text sitting on photos/videos/background images and text that is translucent or animating; waits for finite animations to finish before sampling.

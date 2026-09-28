@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "seo-content": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/mcp.mjs"],
+      "env": {
+        "SEO_GOOGLE_KEY_FILE": "${user_config.google_key_file}",
+        "DATAFORSEO_LOGIN": "${user_config.dataforseo_login}",
+        "DATAFORSEO_PASSWORD": "${user_config.dataforseo_password}"
+      }
+    }
+  }
+}
