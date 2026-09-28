@@ -40,7 +40,7 @@ console.log("PASS analyze — 12 checks");
 ' "$SRV" || exit 1
 
 # MCP handshake: initialize → tools/list → setup_check with no key, then with a non-service-account file.
-BAD=$(mktemp); echo '{"type":"authorized_user"}' > "$BAD"; trap 'rm -f "$BAD"' EXIT
+BAD=$(mktemp -d)/bad.json; echo '{"type":"authorized_user"}' > "$BAD"; trap 'rm -rf "$(dirname "$BAD")"' EXIT
 mcp() {
   printf '%s\n' \
     '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}' \
@@ -72,3 +72,21 @@ const setup = JSON.parse(lines.find((l) => l.id === 3).result.content[0].text);
 if (setup.google?.status !== "missing" || !/not a service-account/.test(setup.google.error)) { console.log("FAIL mcp (wrong key type):", JSON.stringify(setup.google)); process.exit(1); }
 console.log("PASS wrong key type is explained");
 ' < <(mcp SEO_GOOGLE_KEY_FILE="$BAD" DATAFORSEO_LOGIN='${user_config.dataforseo_login}') || exit 1
+
+# Per-client key: the keyFile argument wins over the plugin default, and a non-JSON file never leaks its content.
+LEAK=$(mktemp -d)/secret.json; echo 'TOPSECRET-CONTENT not json' > "$LEAK"
+node -e '
+const lines = require("fs").readFileSync(0, "utf8").trim().split("\n").map(JSON.parse);
+const g = (id) => JSON.parse(lines.find((l) => l.id === id).result.content[0].text).google;
+const fail = [];
+if (!/\/nope\/client\.json/.test(g(1).error)) fail.push("keyFile arg ignored: " + g(1).error);
+if (g(2).status !== "missing" || JSON.stringify(g(2)).includes("TOPSECRET")) fail.push("key content leaked or wrong status");
+if (!/\.json/.test(g(3).error)) fail.push("non-.json path accepted");
+if (fail.length) { console.log("FAIL per-client key:", fail.join("; ")); process.exit(1); }
+console.log("PASS per-client keyFile overrides default, no content leak");
+' < <(printf '%s\n' \
+  "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"setup_check\",\"arguments\":{\"keyFile\":\"/nope/client.json\"}}}" \
+  "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"setup_check\",\"arguments\":{\"keyFile\":\"$LEAK\"}}}" \
+  "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"setup_check\",\"arguments\":{\"keyFile\":\"/etc/hosts\"}}}" \
+  | env -i PATH="$PATH" SEO_GOOGLE_KEY_FILE="$BAD" node "$SRV/mcp.mjs" & P=$!; sleep 1.5; kill $P 2>/dev/null; wait $P 2>/dev/null) || { rm -rf "$(dirname "$LEAK")"; exit 1; }
+rm -rf "$(dirname "$LEAK")"

@@ -21,11 +21,14 @@ const tokenCache = new Map();
 
 export async function loadServiceAccount(path) {
   if (!path) throw new SetupError('No Google service-account key configured.',
-    'Run /plugin, open seo-content → Configure, and set "Google service-account key file" to the JSON key you downloaded from your own Google Cloud project.');
-  let sa;
-  try { sa = JSON.parse(await readFile(path, 'utf8')); }
-  catch (e) { throw new SetupError(`Cannot read service-account key at ${path}: ${e.code || e.message}`, 'Point the plugin setting at an existing JSON key file (Google Cloud → IAM → Service accounts → Keys → Add key → JSON).'); }
-  if (sa.type !== 'service_account' || !sa.client_email || !sa.private_key)
+    'Set "googleKeyFile" in this repo\'s .seo-content.json to the path of the client\'s JSON key (e.g. ~/.config/<client>/sa.json), or set a default key via /plugin configure seo-content@kkuklewski.');
+  if (!path.endsWith('.json')) throw new SetupError(`Key file must be a .json file: ${path}`, 'Use the JSON key downloaded from Google Cloud → IAM → Service accounts → Keys.');
+  let text, sa;
+  try { text = await readFile(path, 'utf8'); }
+  catch (e) { throw new SetupError(`Cannot read service-account key at ${path}: ${e.code || e.message}`, 'Point googleKeyFile in .seo-content.json (or the plugin setting) at an existing JSON key (Google Cloud → IAM → Service accounts → Keys → Add key → JSON).'); }
+  // Generic message on purpose: JSON.parse errors quote file content.
+  try { sa = JSON.parse(text); } catch { sa = null; }
+  if (sa?.type !== 'service_account' || !sa.client_email || !sa.private_key)
     throw new SetupError(`${path} is not a service-account JSON key.`, 'Download a key of type "service account" (not an OAuth client secret).');
   return sa;
 }

@@ -6,9 +6,12 @@ description: Find content opportunities from a site's own Google Search Console 
 # SEO gaps → content briefs
 
 Data comes from the plugin's **seo-content MCP server** (tools `setup_check`, `gsc_opportunities`, `gsc_query`,
-`ga4_landing_pages`, `competitor_gap`, `keyword_volume`, `serp_snapshot`). Credentials are per user:
-the Google service-account key file path and optional DataForSEO login/password are set with
-`/plugin configure seo-content@kkuklewski` and live on that user's machine (password in the OS keychain).
+`ga4_landing_pages`, `competitor_gap`, `keyword_volume`, `serp_snapshot`). Credentials never leave the user's machine:
+- **Google key — per client:** `googleKeyFile` in the repo's `.seo-content.json` is a *path* to that client's
+  service-account JSON (e.g. `~/.config/<client>/sa.json`). Pass it as `keyFile` to **every** Google tool call
+  (`setup_check`, `gsc_*`, `ga4_*`, `competitor_gap`). No `googleKeyFile` → the tools fall back to the optional
+  default key from `/plugin configure seo-content@kkuklewski`.
+- **DataForSEO (optional):** login/password in the plugin settings, password in the OS keychain.
 **Never ask for, print, or write a key, password or key-file contents** — not in chat, not in the repo.
 
 ## Arguments
@@ -22,7 +25,8 @@ the Google service-account key file path and optional DataForSEO login/password 
 
 ## Per-project config — `<repo>/.seo-content.json` (committed, no secrets)
 Template: [../../templates/seo-content.config.example.json](../../templates/seo-content.config.example.json).
-Holds site IDs and editorial settings shared by the team: `siteUrl` (Search Console property), `siteOrigin`,
+Holds site IDs and editorial settings shared by the team: `siteUrl` (Search Console property), `googleKeyFile`
+(path to the client's key — keep it under `~/` so it works on every teammate's machine), `siteOrigin`,
 `ga4PropertyId` (optional), `country` (ISO alpha-3, optional), `locale` (DataForSEO location/language codes),
 `brandTerms`, `competitors`, `minImpressions`, `outputDir` (default `docs/seo`), `blog.*` (language, audience,
 voice, wordCount, cta, avoidTopics, reviewers). No repo → keep the config in the chat and skip saving files.
@@ -31,21 +35,23 @@ voice, wordCount, cta, avoidTopics, reviewers). No repo → keep the config in t
 
 ### 0. Preflight — every run (the whole run for `--setup`)
 1. Read `.seo-content.json`. Missing → step 0.3.
-2. Call `setup_check` with `siteUrl` and `ga4PropertyId` from config. The seo-content tools aren't available at
+2. Call `setup_check` with `siteUrl`, `ga4PropertyId` and `keyFile` (= `googleKeyFile`) from config. The seo-content tools aren't available at
    all → the plugin's MCP server didn't start: tell the user to run `/plugin configure seo-content@kkuklewski`,
    then restart Claude Code. Otherwise act on each source:
-   - `google: missing` → stop and walk the user through it, in their language:
+   - `google: missing` → first look for an existing key for this client: list `~/.config/<client>/*.json` and
+     `~/.config/seo-content/*.json` (file names only — never print contents). A candidate found → confirm with the
+     user, set `googleKeyFile`, re-run `setup_check`. Nothing found → walk them through it, in their language:
      a) Google Cloud console → create/select **their own** project → enable **Google Search Console API**
         (and **Google Analytics Data API** for GA4);
      b) IAM → Service accounts → create one (no roles needed) → Keys → Add key → JSON → save it outside any
         git repo, e.g. `~/.config/seo-content/<site>.json`, then `chmod 600` it;
-     c) `/plugin configure seo-content@kkuklewski` → paste the **path** (never the contents);
-     d) restart Claude Code (the MCP server reads settings at start) → `/seo-gaps --setup` again.
+     c) put the **path** (never the contents) in `googleKeyFile` in `.seo-content.json`; no restart needed.
+     Each teammate saves their copy of the key at the same `~/…` path, or uses a key of their own there.
    - `searchConsole: missing` → show the `fix` (add the service-account email as a user on the property —
      Restricted is enough). If `sites` is non-empty, offer those properties as choices.
    - `ga4: missing` → show the fix, continue without GA4. `ga4: off` → mention once, continue.
    - `dataforseo: off` → one line: competitor gaps / volumes / SERP snapshots are off; continue.
-3. No config yet: take `sites` from `setup_check` and ask (AskUserQuestion) which property; then ask only what
+3. No config yet: find or create the client's key first (as above), take `sites` from `setup_check` and ask (AskUserQuestion) which property; then ask only what
    can't be inferred — brand terms (suggest from the domain), blog language, audience, voice, optional GA4 ID,
    optional competitors. Infer `siteOrigin` from the property and `locale` from language/country
    (Poland 2616/`pl`, Germany 2276/`de`, UK 2826/`en`, US 2840/`en`). Write `.seo-content.json`
@@ -53,7 +59,7 @@ voice, wordCount, cta, avoidTopics, reviewers). No repo → keep the config in t
 4. `--setup` → print a status table (source → ok / off / missing → next step) and stop.
 
 ### 1. Pull and rank
-- `gsc_opportunities` with `siteUrl`, `days`, `minImpressions`, `brandTerms`, `country`.
+- `gsc_opportunities` with `keyFile`, `siteUrl`, `days`, `minImpressions`, `brandTerms`, `country`.
   Small site (summary.impressions < 1000 or every list empty) → retry once with `minImpressions: 10` and say so.
 - GA4 configured → `ga4_landing_pages`; prefer topics near pages that convert (`keyEvents`), deprioritise refresh
   work on pages nobody engages with.

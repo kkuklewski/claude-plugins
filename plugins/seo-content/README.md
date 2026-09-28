@@ -20,7 +20,7 @@ Every user configures **their own** credentials; nothing is shared through the p
 
 | What | Where it lives |
 |---|---|
-| Google service-account key (JSON file) | On your disk, outside any repo. The plugin only stores its **path**. |
+| Google service-account key — **one per client** | JSON file on your disk, outside any repo (e.g. `~/.config/<client>/sa.json`). The client repo's `.seo-content.json` stores only its **path** (`googleKeyFile`). An optional default key can be set in the plugin settings. |
 | DataForSEO login / password (optional) | Plugin settings; the password is `sensitive` → your OS keychain. |
 | Site IDs, brand terms, tone of voice | `<repo>/.seo-content.json` — committed, shared by the team, **no secrets**. |
 
@@ -33,17 +33,18 @@ Credentials reach only the bundled MCP server's environment — they are never p
    /plugin marketplace add kkuklewski/claude-plugins
    /plugin install seo-content@kkuklewski
    ```
-2. Google Cloud console → your project → enable **Google Search Console API** (and **Google Analytics Data API**
+2. Per client: Google Cloud console → the client's (or your) project → enable **Google Search Console API** (and **Google Analytics Data API**
    for GA4) → IAM → Service accounts → create → Keys → Add key → JSON. Save it e.g. as
-   `~/.config/seo-content/<site>.json` and `chmod 600` it.
+   `~/.config/<client>/sa.json` and `chmod 600` it. Already have a key for that client (e.g. for GA)? Reuse it.
 3. Add the service account's `client_email` as a user in **Search Console** (Settings → Users and permissions,
    Restricted is enough) and, optionally, **GA4** (Admin → Property access management, Viewer).
-4. `/plugin configure seo-content@kkuklewski` → key-file path (+ DataForSEO login/password if you want
-   competitor data). Restart Claude Code.
-5. In the site's repo: `/seo-gaps --setup` — checks every source, tells you exactly what's missing, and writes
-   `.seo-content.json` for the team.
+4. Optional: `/plugin configure seo-content@kkuklewski` → DataForSEO login/password for competitor data
+   (and a default key file). Restart Claude Code after changing plugin settings.
+5. In the client's repo: `/seo-gaps --setup` — finds the key, checks every source, tells you exactly what's
+   missing, and writes `.seo-content.json` (with `googleKeyFile`) for the team.
 
-Install scope: **user** (default) — one install works for all your sites; per-site settings live in each repo.
+Install scope: **user** (default) — one install works for all clients; each client's key path, property and
+tone of voice live in that client's repo, so IDs never mix.
 
 ## Requirements
 Node ≥ 22. No npm install — the MCP server has zero dependencies.

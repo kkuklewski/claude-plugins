@@ -9,7 +9,10 @@ import { analyze, competitorGap } from './analyze.mjs';
 
 // An unset userConfig option may arrive as an empty string or an unexpanded placeholder.
 const env = (k) => { const v = process.env[k]?.trim(); return v && !v.startsWith('${') ? v : ''; };
-const keyFile = () => env('SEO_GOOGLE_KEY_FILE').replace(/^~(?=\/)/, homedir());
+// Per-client key (googleKeyFile from the repo's .seo-content.json, passed as a tool argument)
+// wins over the user's default key from the plugin settings.
+const keyFile = (a = {}) => (a.keyFile?.trim() || env('SEO_GOOGLE_KEY_FILE')).replace(/^~(?=\/)/, homedir());
+const keyArg = { keyFile: { type: 'string', description: 'googleKeyFile from .seo-content.json (path to this client\'s service-account JSON). Omit to use the default key from the plugin settings.' } };
 const dfsLogin = () => env('DATAFORSEO_LOGIN');
 const dfsPassword = () => env('DATAFORSEO_PASSWORD');
 
@@ -25,11 +28,11 @@ const TOOLS = [
   {
     name: 'setup_check',
     description: 'Check which data sources work for this user and site. Returns ok/missing/error per source with the exact fix. Call this first in every run.',
-    inputSchema: { type: 'object', properties: { siteUrl: { ...str, description: 'Search Console property, e.g. "sc-domain:example.com" or "https://www.example.com/"' }, ga4PropertyId: str } },
-    run: async ({ siteUrl, ga4PropertyId }) => {
+    inputSchema: { type: 'object', properties: { siteUrl: { ...str, description: 'Search Console property, e.g. "sc-domain:example.com" or "https://www.example.com/"' }, ga4PropertyId: str, ...keyArg } },
+    run: async ({ siteUrl, ga4PropertyId, keyFile: kf }) => {
       const out = { google: null, searchConsole: null, ga4: null, dataforseo: null };
       let sa;
-      try { sa = await loadServiceAccount(keyFile()); out.google = { status: 'ok', serviceAccount: sa.client_email }; }
+      try { sa = await loadServiceAccount(keyFile({ keyFile: kf })); out.google = { status: 'ok', serviceAccount: sa.client_email, keySource: kf ? 'project (.seo-content.json)' : 'plugin default' }; }
       catch (e) { out.google = fail(e); }
       if (sa) {
         try {
@@ -53,8 +56,8 @@ const TOOLS = [
   {
     name: 'gsc_list_sites',
     description: 'List Search Console properties the configured service account can read.',
-    inputSchema: { type: 'object', properties: {} },
-    run: async () => gscSites(await loadServiceAccount(keyFile())),
+    inputSchema: { type: 'object', properties: { ...keyArg } },
+    run: async (a) => gscSites(await loadServiceAccount(keyFile(a))),
   },
   {
     name: 'gsc_opportunities',
@@ -62,14 +65,14 @@ const TOOLS = [
     inputSchema: {
       type: 'object', required: ['siteUrl'],
       properties: {
-        siteUrl: str, days: { type: 'integer', default: 90 }, minImpressions: { type: 'integer', default: 50 },
+        ...keyArg, siteUrl: str, days: { type: 'integer', default: 90 }, minImpressions: { type: 'integer', default: 50 },
         brandTerms: { type: 'array', items: str, description: 'Queries containing these are excluded' },
         questionWords: { type: 'array', items: str }, top: { type: 'integer', default: 25 },
         country: { ...str, description: 'Optional ISO-3166 alpha-3 filter, e.g. "pol"' },
       },
     },
     run: async (a) => {
-      const sa = await loadServiceAccount(keyFile());
+      const sa = await loadServiceAccount(keyFile(a));
       const days = a.days ?? 90;
       const filters = a.country ? [{ dimension: 'country', operator: 'equals', expression: a.country.toLowerCase() }] : [];
       const [rows, pagesNow, pagesPrev] = await Promise.all([
@@ -86,7 +89,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object', required: ['siteUrl'],
       properties: {
-        siteUrl: str, days: { type: 'integer', default: 90 },
+        ...keyArg, siteUrl: str, days: { type: 'integer', default: 90 },
         dimensions: { type: 'array', items: { enum: ['query', 'page', 'country', 'device', 'date', 'searchAppearance'] }, default: ['query'] },
         pageContains: str, queryContains: str, maxRows: { type: 'integer', default: 200 },
       },
@@ -95,7 +98,7 @@ const TOOLS = [
       const filters = [];
       if (a.pageContains) filters.push({ dimension: 'page', operator: 'contains', expression: a.pageContains });
       if (a.queryContains) filters.push({ dimension: 'query', operator: 'contains', expression: a.queryContains });
-      const rows = await gscQuery(await loadServiceAccount(keyFile()), a.siteUrl, {
+      const rows = await gscQuery(await loadServiceAccount(keyFile(a)), a.siteUrl, {
         ...period(a.days ?? 90), dimensions: a.dimensions ?? ['query'], filters, maxRows: Math.min(a.maxRows ?? 200, 1000),
       });
       return rows.sort((x, y) => y.impressions - x.impressions);
@@ -104,19 +107,19 @@ const TOOLS = [
   {
     name: 'ga4_landing_pages',
     description: 'GA4 landing pages with sessions, engagementRate and keyEvents (conversions) for the last N days. Optional source.',
-    inputSchema: { type: 'object', required: ['propertyId'], properties: { propertyId: str, days: { type: 'integer', default: 90 }, limit: { type: 'integer', default: 200 } } },
-    run: async (a) => ga4Report(await loadServiceAccount(keyFile()), a.propertyId, { ...period(a.days ?? 90), limit: a.limit ?? 200 }),
+    inputSchema: { type: 'object', required: ['propertyId'], properties: { ...keyArg, propertyId: str, days: { type: 'integer', default: 90 }, limit: { type: 'integer', default: 200 } } },
+    run: async (a) => ga4Report(await loadServiceAccount(keyFile(a)), a.propertyId, { ...period(a.days ?? 90), limit: a.limit ?? 200 }),
   },
   {
     name: 'competitor_gap',
     description: 'PAID (DataForSEO, ~$0.01–0.05 per competitor). Keywords competitors rank top-20 for where this site has no top-20 position in Search Console. Sorted by how many competitors share the keyword, then volume.',
     inputSchema: {
       type: 'object', required: ['siteUrl', 'competitors'],
-      properties: { siteUrl: str, competitors: { type: 'array', items: str, maxItems: 5 }, location_code: { type: 'integer' }, language_code: str, limit: { type: 'integer', default: 200 } },
+      properties: { ...keyArg, siteUrl: str, competitors: { type: 'array', items: str, maxItems: 5 }, location_code: { type: 'integer' }, language_code: str, limit: { type: 'integer', default: 200 } },
     },
     run: async (a) => {
       const [ownRows, ...competitorItems] = await Promise.all([
-        gscQuery(await loadServiceAccount(keyFile()), a.siteUrl, { ...period(90), dimensions: ['query'], maxRows: 25000 }),
+        gscQuery(await loadServiceAccount(keyFile(a)), a.siteUrl, { ...period(90), dimensions: ['query'], maxRows: 25000 }),
         ...a.competitors.slice(0, 5).map(async (c) => ({ competitor: c, ...(await dfsRankedKeywords(dfsLogin(), dfsPassword(), c, { ...locale(a), limit: a.limit ?? 200 })) })),
       ]);
       const cost = competitorItems.reduce((s, c) => s + (c.cost || 0), 0);

@@ -1,5 +1,10 @@
 # Changelog
 
+## seo-content 0.2.0 — 2026-09-28
+- Per-client Google keys: `googleKeyFile` in each repo's `.seo-content.json` (a path, never the key) is passed to every Google tool and wins over the plugin's default key, so client IDs and access never mix. The default key in plugin settings is now optional.
+- `/seo-gaps --setup` looks for an existing client key under `~/.config/<client>/` before walking through creating one; no restart needed when the key changes.
+- Key loading never echoes file content (non-JSON files, wrong key types) and only accepts `.json` paths.
+
 ## seo-content 0.1.0 — 2026-09-28
 - New plugin: `/seo-gaps` (Search Console → ranked opportunities → content briefs) and `/blog-draft` (brief → review-ready draft with `[VERIFY]` markers and a reviewer checklist).
 - Bundled zero-dependency MCP server: Search Console, GA4 Data API, optional DataForSEO (competitor gaps, volume, SERP snapshot).
