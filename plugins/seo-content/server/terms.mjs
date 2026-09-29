@@ -29,7 +29,8 @@ const STOP = {
     łatwo łatwy szybko szybki proste prosty dobrze dobry dobra dobre lepiej lepszy najlepszy najlepsza najlepsze
     warto chcesz chcemy chce chcą możemy mogę musisz musimy trzeba potrzebujesz jesteśmy są będziesz będziemy
     wybierz poznaj skontaktuj dowiedz zapraszamy zapisz dołącz odkryj wypróbuj kup dodaj pobierz przejdź napisz zadzwoń
-    oferujemy dostarczamy przygotowujemy dbamy stronie strona strony strone tutaj kontakt ok tak nie
+    oferujemy dostarczamy przygotowujemy dbamy zapewniamy obsługujemy gwarantujemy realizujemy współpracujemy działamy możemy
+    nami wami nimi którym którymi której których którego któremu jaką jakiej jakich jakim temu tamtym stronie strona strony strone tutaj kontakt ok tak nie
     zł pln rok roku lat dni dzień dnia godzin godziny min`,
   en: `a about above after again all also am an and any are as at be because been before being below between both but by can could
     did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its
