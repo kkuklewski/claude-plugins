@@ -1,7 +1,7 @@
 {
   "name": "seo-content",
   "description": "Turn Google Search Console data into content opportunities and review-ready blog drafts — quick wins, cannibalisation, decaying pages, optional competitor gaps — without a Semrush/Ahrefs subscription. Every user brings their own keys.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "Kamil Kuklewski",
     "url": "https://github.com/kkuklewski"
@@ -31,7 +31,7 @@
     "dataforseo_login": {
       "type": "string",
       "title": "DataForSEO API login (optional)",
-      "description": "Your own DataForSEO API login — enables competitor gaps, search volume and SERP snapshots (pay-as-you-go). Leave empty to use Search Console only.",
+      "description": "Your own DataForSEO API login — enables competitor gaps, search volume and SERP snapshots and term plans (pay-as-you-go). Leave empty to use Search Console only.",
       "required": false,
       "default": ""
     },

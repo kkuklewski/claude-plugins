@@ -4,7 +4,9 @@
 // (the key file path and DataForSEO login/password live on each user's own machine,
 // sensitive values in their OS keychain). Nothing here is shared between users.
 import { homedir } from 'node:os';
-import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, dfsRankedKeywords, dfsSearchVolume, dfsSerp } from './lib.mjs';
+import { readFile } from 'node:fs/promises';
+import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, dfsRankedKeywords, dfsSearchVolume, dfsSerp, dfsContentParsing } from './lib.mjs';
+import { termPlan, parseMarkdown, fromContentParsing } from './terms.mjs';
 import { analyze, competitorGap } from './analyze.mjs';
 
 // An unset userConfig option may arrive as an empty string or an unexpanded placeholder.
@@ -138,7 +140,50 @@ const TOOLS = [
     inputSchema: { type: 'object', required: ['keyword'], properties: { keyword: str, location_code: { type: 'integer' }, language_code: str } },
     run: async (a) => dfsSerp(dfsLogin(), dfsPassword(), a.keyword, locale(a)),
   },
+  {
+    name: 'term_plan',
+    description: 'PAID (DataForSEO, ~$0.004–0.02 per keyword). NeuronWriter-style content plan from the current Google top-10: target length and H2/H3 count, the terms the ranking pages share with a "use N–M times" range each, terms used in their headings, People-also-ask and heading questions, and every competitor\'s heading outline. Pass draftFile (absolute path to a markdown draft) to also score that draft 0–100 and list missing and overused terms.',
+    inputSchema: {
+      type: 'object', required: ['keyword'],
+      properties: {
+        keyword: str, location_code: { type: 'integer' }, language_code: str,
+        exclude: { type: 'array', items: str, description: 'Domains to leave out, e.g. your own site (siteOrigin host) — social networks are always skipped' },
+        draftFile: { ...str, description: 'Absolute path to a markdown draft to score against the plan' },
+        minShare: { type: 'number', default: 0.4, description: 'Share of competitor pages that must use a term for it to count' },
+      },
+    },
+    run: async (a) => {
+      const draft = a.draftFile ? parseMarkdown(await readFile(a.draftFile.replace(/^~(?=\/)/, homedir()), 'utf8')) : null;
+      const serp = await dfsSerp(dfsLogin(), dfsPassword(), a.keyword, locale(a));
+      const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
+      const skip = new Set([...(a.exclude || []).map((d) => host(d.includes('://') ? d : `https://${d}`)), ...SOCIAL]);
+      const urls = serp.items.filter((i) => i.type === 'organic' && i.url && ![...skip].some((d) => host(i.url) === d || host(i.url).endsWith(`.${d}`)))
+        .map((i) => { const u = new URL(i.url); u.searchParams.delete('srsltid'); return u.toString(); });
+      let cost = serp.cost || 0;
+      const pages = await Promise.all(urls.map(async (url) => {
+        try {
+          let r = await dfsContentParsing(dfsLogin(), dfsPassword(), url);
+          cost += r.cost || 0;
+          let page = fromContentParsing(r.pageContent);
+          if ((page.text.match(/\p{L}+/gu) || []).length < 150) {
+            r = await dfsContentParsing(dfsLogin(), dfsPassword(), url, { javascript: true });
+            cost += r.cost || 0;
+            page = fromContentParsing(r.pageContent);
+          }
+          return { url, ...page };
+        } catch (e) {
+          if (e instanceof SetupError) throw e;
+          return { url, headings: [], text: '', error: e.message };
+        }
+      }));
+      const paa = serp.items.filter((i) => i.type === 'people_also_ask').flatMap((i) => i.questions);
+      const lang = (a.language_code || 'en').slice(0, 2);
+      return { keyword: a.keyword, costUsd: +cost.toFixed(4), ...termPlan(pages, { keyword: a.keyword, lang, paa, draft, minShare: a.minShare }) };
+    },
+  },
 ];
+
+const SOCIAL = ['facebook.com', 'instagram.com', 'youtube.com', 'tiktok.com', 'linkedin.com', 'x.com', 'twitter.com', 'pinterest.com'];
 
 function fail(e) {
   return e instanceof SetupError ? { status: 'missing', error: e.message, fix: e.fix } : { status: 'error', error: e.message };
@@ -153,7 +198,7 @@ async function handle(req) {
     return send({ id, result: {
       protocolVersion: params.protocolVersion || '2025-06-18',
       capabilities: { tools: {} },
-      serverInfo: { name: 'seo-content', version: '0.1.0' },
+      serverInfo: { name: 'seo-content', version: '0.3.0' },
     } });
   }
   if (method === 'tools/list') return send({ id, result: { tools: TOOLS.map(({ run, ...t }) => t) } });

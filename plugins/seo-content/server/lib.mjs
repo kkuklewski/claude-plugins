@@ -185,3 +185,12 @@ export async function dfsSerp(login, password, keyword, opts = {}) {
       : { type: i.type, position: i.rank_group, title: i.title, url: i.url, description: i.description });
   return { cost, items };
 }
+
+// Structured main content of one page (headings + text blocks). ~$0.000125; JS rendering costs more, so
+// the caller only asks for it when the plain fetch came back nearly empty.
+export async function dfsContentParsing(login, password, url, opts = {}) {
+  const task = { url, disable_cookie_popup: true };
+  if (opts.javascript) Object.assign(task, { enable_javascript: true, enable_browser_rendering: true });
+  const { cost, result } = await dfs(login, password, '/on_page/content_parsing/live', task);
+  return { cost, pageContent: result?.items?.[0]?.page_content || null };
+}

@@ -12,7 +12,15 @@ SERP snapshots are optional via pay-as-you-go [DataForSEO](https://dataforseo.co
 | Skill | Does |
 |---|---|
 | `/seo-gaps` | Finds striking-distance queries (pos 4.5–20), weak snippets, cannibalisation, content gaps (impressions but no page in the top 20, questions first), decaying pages; optional competitor gaps. Writes a dated report + one brief per new-post opportunity. |
-| `/blog-draft` | Brief → draft in the site's language, voice and frontmatter shape, with title/meta variants, `[VERIFY]` markers on every claim to check, and a reviewer checklist for the content team. Never publishes. |
+| `/blog-draft` | Brief → draft in the site's language, voice and frontmatter shape, with title/meta variants, `[VERIFY]` markers on every claim to check, and a reviewer checklist for the content team. Scores the draft against the term plan. Never publishes. |
+
+### Term plan (NeuronWriter-style, DataForSEO)
+`term_plan` takes the live Google top-10 for a keyword, parses each ranking page's main content (menus, footers
+and sidebars excluded), and returns what they have in common: target length and H2/H3 count, the 1–3-word terms
+most of them use with a "use N–M times" range scaled to that length, the terms they put in headings, the
+People-also-ask questions and every competitor's heading outline. With `draftFile` it also scores a markdown draft
+0–100 and lists missing and overused terms. Inflected forms are merged by a light suffix stemmer (Polish, English,
+German), so "cateringu dietetycznego" counts as "catering dietetyczny". Cost: ~$0.004–0.02 per keyword.
 
 ## Your keys stay yours
 
@@ -53,10 +61,12 @@ Node ≥ 22. No npm install — the MCP server has zero dependencies.
 - Search Console only knows queries the site already appears for (last 16 months). Brand-new topics need
   `competitor_gap` (DataForSEO) or your own ideas.
 - No backlink data.
+- The term plan is a coverage checklist from word statistics, not semantic analysis: expect some generic words
+  in the list, and don't write to the numbers.
 - Drafts are drafts: facts are marked `[VERIFY]` for the content team, nothing is published automatically.
 
 ## Tests
 ```bash
 bash tests/run.sh
 ```
-Offline: opportunity analysis on fixture rows, MCP handshake, and the setup messages for missing/wrong credentials.
+Offline: opportunity analysis on fixture rows, term plan on fixture pages, MCP handshake, and the setup messages for missing/wrong credentials.

@@ -30,6 +30,11 @@ and only draft after the user agrees.
    - Cover every H2 in the outline; add an FAQ section only if the brief has questions.
    - Secondary keywords only where they read naturally. No keyword stuffing, no filler, no "In today's
      fast-paced world".
+   - **Term plan** (brief section, or run `term_plan` for the primary keyword when the brief has none and
+     DataForSEO is on): treat it as a coverage checklist — cover the subtopics behind the terms, use heading terms
+     in H2/H3 where they fit, answer the listed questions. Aim for the lower end of each range; a term that doesn't
+     fit our product or angle is skipped, not forced in. Length follows the plan's median when it's inside
+     `wordCount`, otherwise `wordCount` wins.
    - Anything factual that isn't common knowledge or in the brief → leave it in, marked
      `[VERIFY: what to check]`. Never invent statistics, quotes, studies, prices or customer names.
    - Stay inside `wordCount`; end with the `cta`.
@@ -45,10 +50,16 @@ and only draft after the user agrees.
    - [ ] Title + description chosen
    - [ ] Internal links checked; add 1–2 links TO this post from related pages: <list from brief>
    - [ ] Images/alt text added
+   - [ ] Term-plan score: N/100 — terms skipped on purpose: <list>
    - [ ] Legal/medical/financial statements approved (if any)
    Reviewers: <blog.reviewers>
    ```
-7. Set the brief's `status: draft`. Report: file path, word count, number of `[VERIFY]` markers, open questions.
+7. **Score it** (DataForSEO on): `term_plan` with the primary keyword, `exclude: [<siteOrigin host>]` and
+   `draftFile: <absolute path of the draft>`. Score < 70 → one revision pass on the `missing` terms that read
+   naturally (and trim anything in `overused`), then score again. Never chase 100: a lower score with honest,
+   readable copy beats a stuffed one. Put the final score and the terms left out on purpose in the checklist.
+8. Set the brief's `status: draft`. Report: file path, word count, term-plan score, number of `[VERIFY]`
+   markers, open questions.
 
 ## Rules
 - This is a draft for human editors. Never publish, push to a CMS, or commit without the user asking.

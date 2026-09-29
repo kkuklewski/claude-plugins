@@ -6,7 +6,7 @@ description: Find content opportunities from a site's own Google Search Console 
 # SEO gaps → content briefs
 
 Data comes from the plugin's **seo-content MCP server** (tools `setup_check`, `gsc_opportunities`, `gsc_query`,
-`ga4_landing_pages`, `competitor_gap`, `keyword_volume`, `serp_snapshot`). Credentials never leave the user's machine:
+`ga4_landing_pages`, `competitor_gap`, `keyword_volume`, `serp_snapshot`, `term_plan`). Credentials never leave the user's machine:
 - **Google key — per client:** `googleKeyFile` in the repo's `.seo-content.json` is a *path* to that client's
   service-account JSON (e.g. `~/.config/<client>/sa.json`). Pass it as `keyFile` to **every** Google tool call
   (`setup_check`, `gsc_*`, `ga4_*`, `competitor_gap`). No `googleKeyFile` → the tools fall back to the optional
@@ -88,9 +88,13 @@ Into `<outputDir>/` (create it):
 - `seo-gaps-YYYY-MM-DD.md` — headline numbers, one table per action type (query / page / impressions / position /
   why / action), then which data sources were used and which were off.
 - `briefs/<slug>.md` — for the top `--briefs N` New post / new section items, from
-  [../../templates/brief.md](../../templates/brief.md). DataForSEO on → `serp_snapshot` for the primary keyword
-  (~$0.002 each) fills "What ranks now" and People-also-ask; off → write `not checked — DataForSEO off` there
-  and build the outline from the site's own query cluster.
+  [../../templates/brief.md](../../templates/brief.md). DataForSEO on → `term_plan` for the primary keyword
+  with `exclude: [<siteOrigin host>]` (~$0.004–0.02 each; state the total first) fills "What ranks now" (top-10
+  URLs + People-also-ask) and "Term plan" (length, H2/H3 count, the top ~25 terms with use ranges, heading terms,
+  questions). Use it to shape the outline: H2s cover the heading terms and questions that fit our angle; answer
+  the People-also-ask questions in the FAQ. When the top-10 is a different page type than planned (e.g. city
+  landing pages for a how-to), note the intent mismatch and consider a closer keyword. Off → write
+  `not checked — DataForSEO off` in both sections and build the outline from the site's own query cluster.
 
 End with the next command: `/blog-draft <outputDir>/briefs/<slug>.md`.
 

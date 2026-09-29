@@ -39,6 +39,37 @@ if (fail.length) { console.log("FAIL analyze:", fail.join("; ")); process.exit(1
 console.log("PASS analyze — 12 checks");
 ' "$SRV" || exit 1
 
+# Term plan on fixture pages (Polish inflection must merge; stop words and one-page terms must not appear).
+node --input-type=module -e '
+const { termPlan, parseMarkdown, fromContentParsing, stem } = await import(process.argv[1] + "/terms.mjs");
+const filler = (n) => Array.from({ length: n }, (_, i) => "słowo" + i).join(" ");
+const page = (url, body, heads) => ({ url, headings: heads.map(([level, text]) => ({ level, text })), text: body + " " + filler(200) });
+const pages = [
+  page("https://a.pl", "Catering dietetyczny dla firm w Szczecinie. Cateringu dietetycznego szukają pracownicy. Zawsze świeże posiłki.", [[1, "Catering dla firm"], [2, "Ile kosztuje catering dietetyczny?"]]),
+  page("https://b.pl", "Nasz catering dietetyczny dowozimy do biura. Posiłki dla pracowników i faktura dla firmy.", [[2, "Catering dietetyczny do biura"]]),
+  page("https://c.pl", "Catering dietetyczny w pracy: posiłek regeneracyjny i faktura VAT.", [[2, "Faktura za catering"]]),
+  { url: "https://empty.pl", headings: [], text: "za mało" },
+];
+const md = "---\ntitle: x\n---\n# Catering dla firm\n\nCatering dietetyczny do biura, faktura dla firmy. " + filler(300) + "\n\n---\n## Review checklist (delete before publishing)\n- [ ] catering catering catering";
+const p = termPlan(pages, { keyword: "catering dietetyczny", lang: "pl", paa: ["Czy catering można wliczyć w koszty?"], draft: parseMarkdown(md) });
+const fail = []; const ok = (c, m) => c || fail.push(m);
+const t = (x) => p.terms.find((y) => y.term === x);
+ok(stem("dietetycznego") === stem("dietetyczny"), "stemmer merges inflection");
+ok(t("catering dietetyczny")?.pages === "3/3", "phrase across inflected forms: " + JSON.stringify(t("catering dietetyczny")));
+ok(!p.terms.some((x) => /^(zawsze|nasz|dla)$/.test(x.term)), "stop words kept");
+ok(!t("posiłek regeneracyjny"), "one-page phrase kept");
+ok(p.skipped.length === 1 && p.competitors.length === 3, "thin page not skipped");
+ok(p.keyword.pagesUsingExact === 3, "keyword usage");
+ok(p.questions[0].source === "people-also-ask" && p.questions.some((q) => q.q.startsWith("Ile kosztuje")), "questions");
+ok(p.draftScore && p.draftScore.keywordInH1 === false && p.draftScore.score > 0 && p.draftScore.score <= 100, "draft score " + JSON.stringify(p.draftScore));
+ok(parseMarkdown(md).text.split("catering").length < 6, "review checklist excluded from draft");
+ok(termPlan(pages.slice(0, 2), {}).error, "fewer than 3 pages → error");
+const cp = fromContentParsing({ header: { primary_content: [{ text: "MENU" }] }, main_topic: [{ h_title: "Tytuł", level: 1, primary_content: [{ text: "Treść" }] }], secondary_topic: [{ h_title: "Sidebar", level: 3 }] });
+ok(cp.headings.length === 1 && !cp.text.includes("MENU") && !cp.text.includes("Sidebar"), "content parsing keeps main topic only");
+if (fail.length) { console.log("FAIL terms:", fail.join("; ")); process.exit(1); }
+console.log("PASS term plan — 11 checks");
+' "$SRV" || exit 1
+
 # MCP handshake: initialize → tools/list → setup_check with no key, then with a non-service-account file.
 BAD=$(mktemp -d)/bad.json; echo '{"type":"authorized_user"}' > "$BAD"; trap 'rm -rf "$(dirname "$BAD")"' EXIT
 mcp() {
@@ -57,7 +88,7 @@ const by = Object.fromEntries(lines.map((l) => [l.id, l]));
 const fail = [];
 const ok = (c, m) => c || fail.push(m);
 ok(by[1]?.result?.serverInfo?.name === "seo-content", "initialize");
-ok(by[2]?.result?.tools?.length === 8, "tools/list count " + by[2]?.result?.tools?.length);
+ok(by[2]?.result?.tools?.length === 9, "tools/list count " + by[2]?.result?.tools?.length);
 const setup = JSON.parse(by[3]?.result?.content?.[0]?.text || "{}");
 ok(setup.google?.status === "missing" && /plugin/.test(setup.google.fix), "setup_check google missing + fix");
 ok(setup.dataforseo?.status === "off", "setup_check dataforseo off");

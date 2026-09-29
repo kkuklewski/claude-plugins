@@ -26,6 +26,19 @@ source: seo-gaps YYYY-MM-DD
 <!-- serp_snapshot: top results (title — angle — what they miss), featured snippet, People also ask.
      Or: "not checked — DataForSEO off". -->
 
+## Term plan
+<!-- term_plan for the primary keyword (DataForSEO): what the current top-10 pages share. A coverage checklist
+     for the writer, not a quota — /blog-draft scores the draft against it. Or: "not checked — DataForSEO off".
+     If the top-10 is a different page type than this brief (e.g. city landing pages for a guide), say so here. -->
+- **Length:** ~N words (competitors min–max), ~N H2 / ~N H3
+- **Exact keyword** used by N/N pages
+
+| Term | Pages | Use | In headings |
+|---|---|---|---|
+
+**Heading terms:**
+**Questions to answer** (People-also-ask first, then competitor headings):
+
 ## Our angle
 <!-- What we can say that the current results don't: own data, experience, product specifics, a clearer
      structure. One or two sentences. -->
