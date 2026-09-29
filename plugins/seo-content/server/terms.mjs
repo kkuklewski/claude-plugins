@@ -147,8 +147,17 @@ export function termPlan(pages, opts = {}) {
     questions,
     competitorHeadings: stats.map((s) => ({ url: s.url, headings: s.headings.filter((h) => h.level <= 3).slice(0, 30).map((h) => `H${h.level} ${h.text}`) })),
   };
+  // What a saved plan needs to score later drafts without a new SERP (see scoreSavedPlan).
+  plan.scoring = { lang, kwKey, terms: terms.map(({ key, term, min, max, headingPages }) => ({ key, term, min, max, headingPages })) };
   if (opts.draft) plan.draftScore = scoreDraft(opts.draft, terms, plan.target, { lang, stops, kwKey });
   return plan;
+}
+
+// Score a draft against a plan saved earlier (term_plan savePlan), so scores stay comparable between revisions.
+export function scoreSavedPlan(saved, draft) {
+  const { lang, kwKey, terms } = saved.scoring || {};
+  if (!terms) throw new Error('Saved plan has no "scoring" section — re-run term_plan with savePlan.');
+  return scoreDraft(draft, terms, saved.target, { lang, stops: stopSet(lang), kwKey });
 }
 
 // Draft = { text, headings: [{ level, text }] } — markdown already split by the caller (see parseMarkdown).

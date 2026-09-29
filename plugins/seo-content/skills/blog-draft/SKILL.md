@@ -54,8 +54,10 @@ and only draft after the user agrees.
    - [ ] Legal/medical/financial statements approved (if any)
    Reviewers: <blog.reviewers>
    ```
-7. **Score it** (DataForSEO on): `term_plan` with the primary keyword, `exclude: [<siteOrigin host>]` and
-   `draftFile: <absolute path of the draft>`. Score < 70 → one revision pass on the `missing` terms that read
+7. **Score it**: the brief has a saved plan (`<slug>.plan.json` next to it) → `term_plan` with
+   `planFile: <that path>` and `draftFile: <absolute path of the draft>` — free, and every revision is scored against
+   the same competitors (Google's top 10 changes between runs). No saved plan and DataForSEO on → `term_plan` with the
+   primary keyword, `exclude: [<siteOrigin host>]`, `savePlan` next to the brief and `draftFile`. Score < 70 → one revision pass on the `missing` terms that read
    naturally (and trim anything in `overused`), then score again. Never chase 100: a lower score with honest,
    readable copy beats a stuffed one. Put the final score and the terms left out on purpose in the checklist.
 8. Set the brief's `status: draft`. Report: file path, word count, term-plan score, number of `[VERIFY]`

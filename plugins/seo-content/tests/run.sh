@@ -41,7 +41,7 @@ console.log("PASS analyze — 12 checks");
 
 # Term plan on fixture pages (Polish inflection must merge; stop words and one-page terms must not appear).
 node --input-type=module -e '
-const { termPlan, parseMarkdown, fromContentParsing, stem } = await import(process.argv[1] + "/terms.mjs");
+const { termPlan, parseMarkdown, fromContentParsing, stem, scoreSavedPlan } = await import(process.argv[1] + "/terms.mjs");
 const filler = (n) => Array.from({ length: n }, (_, i) => "słowo" + i).join(" ");
 const page = (url, body, heads) => ({ url, headings: heads.map(([level, text]) => ({ level, text })), text: body + " " + filler(200) });
 const pages = [
@@ -66,11 +66,14 @@ ok(parseMarkdown(md).text.split("catering").length < 6, "review checklist exclud
 const h1 = termPlan(pages, { keyword: "catering dla firm", lang: "pl", draft: parseMarkdown("# Catering w Szczecinie dla firm\\n" + filler(300)) });
 ok(h1.draftScore.keywordInH1 === false, "H1 keyword needs the words in order");
 ok(termPlan(pages, { keyword: "catering firm", lang: "pl", draft: parseMarkdown("# Catering dla firm\\n" + filler(300)) }).draftScore.keywordInH1, "H1 keyword ignores stop words between");
+const saved = JSON.parse(JSON.stringify(p));
+const again = scoreSavedPlan(saved, parseMarkdown(md));
+ok(again.score === p.draftScore.score && again.terms === p.draftScore.terms, "saved plan scores the same as the live plan");
 ok(termPlan(pages.slice(0, 2), {}).error, "fewer than 3 pages → error");
 const cp = fromContentParsing({ header: { primary_content: [{ text: "MENU" }] }, main_topic: [{ h_title: "Tytuł", level: 1, primary_content: [{ text: "Treść" }] }], secondary_topic: [{ h_title: "Sidebar", level: 3 }] });
 ok(cp.headings.length === 1 && !cp.text.includes("MENU") && !cp.text.includes("Sidebar"), "content parsing keeps main topic only");
 if (fail.length) { console.log("FAIL terms:", fail.join("; ")); process.exit(1); }
-console.log("PASS term plan — 13 checks");
+console.log("PASS term plan — 14 checks");
 ' "$SRV" || exit 1
 
 # MCP handshake: initialize → tools/list → setup_check with no key, then with a non-service-account file.

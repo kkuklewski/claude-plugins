@@ -6,7 +6,9 @@
 import { homedir } from 'node:os';
 import { readFile } from 'node:fs/promises';
 import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, dfsRankedKeywords, dfsSearchVolume, dfsSerp, dfsContentParsing } from './lib.mjs';
-import { termPlan, parseMarkdown, fromContentParsing } from './terms.mjs';
+import { termPlan, parseMarkdown, fromContentParsing, scoreSavedPlan } from './terms.mjs';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { analyze, competitorGap } from './analyze.mjs';
 
 // An unset userConfig option may arrive as an empty string or an unexpanded placeholder.
@@ -147,17 +149,26 @@ const TOOLS = [
       type: 'object', required: ['keyword'],
       properties: {
         keyword: str, location_code: { type: 'integer' }, language_code: str,
-        exclude: { type: 'array', items: str, description: 'Domains to leave out, e.g. your own site (siteOrigin host) — social networks are always skipped' },
+        exclude: { type: 'array', items: str, description: 'Domains to leave out, e.g. your own site (siteOrigin host) — social networks and directory sites (oferteo, panoramafirm…) are always skipped' },
         draftFile: { ...str, description: 'Absolute path to a markdown draft to score against the plan' },
+        savePlan: { ...str, description: 'Absolute path (.json) to save the plan to, e.g. next to the brief. Score later drafts against it with planFile.' },
+        planFile: { ...str, description: 'Absolute path to a plan saved earlier with savePlan. With draftFile: score the draft against it — no DataForSEO call, no cost, same competitors every time.' },
         minShare: { type: 'number', default: 0.4, description: 'Share of competitor pages that must use a term for it to count' },
       },
     },
     run: async (a) => {
-      const draft = a.draftFile ? parseMarkdown(await readFile(a.draftFile.replace(/^~(?=\/)/, homedir()), 'utf8')) : null;
-      const serp = await dfsSerp(dfsLogin(), dfsPassword(), a.keyword, locale(a));
+      const path = (p) => p.replace(/^~(?=\/)/, homedir());
+      const draft = a.draftFile ? parseMarkdown(await readFile(path(a.draftFile), 'utf8')) : null;
+      if (a.planFile) {
+        if (!draft) throw new Error('planFile needs draftFile (the draft to score).');
+        const saved = JSON.parse(await readFile(path(a.planFile), 'utf8'));
+        return { keyword: saved.keyword?.phrase, plannedAt: saved.plannedAt, costUsd: 0, draftScore: scoreSavedPlan(saved, draft) };
+      }
+      const serp = await dfsSerp(dfsLogin(), dfsPassword(), a.keyword, { ...locale(a), depth: 20 });
       const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
-      const skip = new Set([...(a.exclude || []).map((d) => host(d.includes('://') ? d : `https://${d}`)), ...SOCIAL]);
+      const skip = new Set([...(a.exclude || []).map((d) => host(d.includes('://') ? d : `https://${d}`)), ...SOCIAL, ...DIRECTORIES]);
       const urls = serp.items.filter((i) => i.type === 'organic' && i.url && ![...skip].some((d) => host(i.url) === d || host(i.url).endsWith(`.${d}`)))
+        .slice(0, 12) // directories and social dropped above; positions 11–20 backfill them
         .map((i) => { const u = new URL(i.url); u.searchParams.delete('srsltid'); return u.toString(); });
       let cost = serp.cost || 0;
       const pages = await Promise.all(urls.map(async (url) => {
@@ -178,11 +189,21 @@ const TOOLS = [
       }));
       const paa = serp.items.filter((i) => i.type === 'people_also_ask').flatMap((i) => i.questions);
       const lang = (a.language_code || 'en').slice(0, 2);
-      return { keyword: a.keyword, costUsd: +cost.toFixed(4), ...termPlan(pages, { keyword: a.keyword, lang, paa, draft, minShare: a.minShare }) };
+      const { scoring, ...plan } = termPlan(pages, { keyword: a.keyword, lang, paa, draft, minShare: a.minShare });
+      let saved;
+      if (a.savePlan && !plan.error) {
+        await mkdir(dirname(path(a.savePlan)), { recursive: true });
+        await writeFile(path(a.savePlan), JSON.stringify({ plannedAt: new Date().toISOString().slice(0, 10), locale: locale(a), ...plan, scoring }, null, 1) + '\n');
+        saved = path(a.savePlan);
+      }
+      return { keyword: a.keyword, costUsd: +cost.toFixed(4), ...(saved && { savedTo: saved }), ...plan };
     },
   },
 ];
 
+// Directory and listing sites: company profiles, not content that ranks on its own merit.
+const DIRECTORIES = ['oferteo.pl', 'panoramafirm.pl', 'pkt.pl', 'orlygastronomii.pl', 'starofservice.pl', 'aleo.com', 'gowork.pl',
+  'firmy.net', 'cylex-polska.pl', 'zumi.pl', 'yelp.com', 'tripadvisor.com', 'tripadvisor.pl', 'google.com', 'maps.google.com', 'webflow.io'];
 const SOCIAL = ['facebook.com', 'instagram.com', 'youtube.com', 'tiktok.com', 'linkedin.com', 'x.com', 'twitter.com', 'pinterest.com'];
 
 function fail(e) {

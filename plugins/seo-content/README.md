@@ -19,7 +19,9 @@ SERP snapshots are optional via pay-as-you-go [DataForSEO](https://dataforseo.co
 and sidebars excluded), and returns what they have in common: target length and H2/H3 count, the 1–3-word terms
 most of them use with a "use N–M times" range scaled to that length, the terms they put in headings, the
 People-also-ask questions and every competitor's heading outline. With `draftFile` it also scores a markdown draft
-0–100 and lists missing and overused terms. Inflected forms are merged by a light suffix stemmer (Polish, English,
+0–100 and lists missing and overused terms. `savePlan` stores the plan next to the brief; `planFile` scores later
+drafts against that saved plan for free, so revisions are compared against the same competitors (the live top 10 shifts
+between runs). Directory and social sites are skipped and positions 11–20 fill in for them. Inflected forms are merged by a light suffix stemmer (Polish, English,
 German), so "cateringu dietetycznego" counts as "catering dietetyczny". Cost: ~$0.004–0.02 per keyword.
 
 ## Your keys stay yours

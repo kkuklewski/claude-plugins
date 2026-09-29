@@ -89,7 +89,8 @@ Into `<outputDir>/` (create it):
   why / action), then which data sources were used and which were off.
 - `briefs/<slug>.md` — for the top `--briefs N` New post / new section items, from
   [../../templates/brief.md](../../templates/brief.md). DataForSEO on → `term_plan` for the primary keyword
-  with `exclude: [<siteOrigin host>]` (~$0.004–0.02 each; state the total first) fills "What ranks now" (top-10
+  with `exclude: [<siteOrigin host>]` and `savePlan: <absolute path>/briefs/<slug>.plan.json` (~$0.004–0.02 each;
+  state the total first) fills "What ranks now" (top-10
   URLs + People-also-ask) and "Term plan" (length, H2/H3 count, the top ~25 terms with use ranges, heading terms,
   questions). Use it to shape the outline: H2s cover the heading terms and questions that fit our angle; answer
   the People-also-ask questions in the FAQ. When the top-10 is a different page type than planned (e.g. city
