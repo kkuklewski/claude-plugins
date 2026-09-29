@@ -50,7 +50,7 @@ const pages = [
   page("https://c.pl", "Catering dietetyczny w pracy: posiłek regeneracyjny i faktura VAT.", [[2, "Faktura za catering"]]),
   { url: "https://empty.pl", headings: [], text: "za mało" },
 ];
-const md = "---\ntitle: x\n---\n# Catering dla firm\n\nCatering dietetyczny do biura, faktura dla firmy. " + filler(300) + "\n\n---\n## Review checklist (delete before publishing)\n- [ ] catering catering catering";
+const md = "---\ntitle: x\n---\n# Catering dla firm\n\nCatering dietetyczny do biura [VERIFY: catering catering catering], faktura dla firmy. " + filler(300) + "\n\n---\n## Review checklist (delete before publishing)\n- [ ] catering catering catering";
 const p = termPlan(pages, { keyword: "catering dietetyczny", lang: "pl", paa: ["Czy catering można wliczyć w koszty?"], draft: parseMarkdown(md) });
 const fail = []; const ok = (c, m) => c || fail.push(m);
 const t = (x) => p.terms.find((y) => y.term === x);
@@ -63,11 +63,14 @@ ok(p.keyword.pagesUsingExact === 3, "keyword usage");
 ok(p.questions[0].source === "people-also-ask" && p.questions.some((q) => q.q.startsWith("Ile kosztuje")), "questions");
 ok(p.draftScore && p.draftScore.keywordInH1 === false && p.draftScore.score > 0 && p.draftScore.score <= 100, "draft score " + JSON.stringify(p.draftScore));
 ok(parseMarkdown(md).text.split("catering").length < 6, "review checklist excluded from draft");
+const h1 = termPlan(pages, { keyword: "catering dla firm", lang: "pl", draft: parseMarkdown("# Catering w Szczecinie dla firm\\n" + filler(300)) });
+ok(h1.draftScore.keywordInH1 === false, "H1 keyword needs the words in order");
+ok(termPlan(pages, { keyword: "catering firm", lang: "pl", draft: parseMarkdown("# Catering dla firm\\n" + filler(300)) }).draftScore.keywordInH1, "H1 keyword ignores stop words between");
 ok(termPlan(pages.slice(0, 2), {}).error, "fewer than 3 pages → error");
 const cp = fromContentParsing({ header: { primary_content: [{ text: "MENU" }] }, main_topic: [{ h_title: "Tytuł", level: 1, primary_content: [{ text: "Treść" }] }], secondary_topic: [{ h_title: "Sidebar", level: 3 }] });
 ok(cp.headings.length === 1 && !cp.text.includes("MENU") && !cp.text.includes("Sidebar"), "content parsing keeps main topic only");
 if (fail.length) { console.log("FAIL terms:", fail.join("; ")); process.exit(1); }
-console.log("PASS term plan — 11 checks");
+console.log("PASS term plan — 13 checks");
 ' "$SRV" || exit 1
 
 # MCP handshake: initialize → tools/list → setup_check with no key, then with a non-service-account file.

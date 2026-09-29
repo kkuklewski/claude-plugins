@@ -1,7 +1,7 @@
 {
   "name": "seo-content",
   "description": "Turn Google Search Console data into content opportunities and review-ready blog drafts — quick wins, cannibalisation, decaying pages, optional competitor gaps — without a Semrush/Ahrefs subscription. Every user brings their own keys.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "author": {
     "name": "Kamil Kuklewski",
     "url": "https://github.com/kkuklewski"

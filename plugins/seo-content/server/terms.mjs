@@ -172,14 +172,21 @@ function scoreDraft(draft, terms, target, { lang, stops, kwKey }) {
     score: Math.round(100 * (0.6 * termPct + 0.25 * headPct + 0.15 * lenPct)),
     words, targetWords: target.words.median,
     terms: `${hit}/${terms.length}`, headingTerms: `${headHit}/${headWant}`,
-    keywordInH1: kwKey ? phrases(h1, lang, stops).has(kwKey) : undefined,
+    keywordInH1: kwKey ? containsKeyword(h1, kwKey, lang, stops) : undefined,
     missing, overused: over,
   };
 }
 
+// Keyword stems appear in order, ignoring stop words between them ("obiady dla pracowników w Szczecinie").
+function containsKeyword(text, kwKey, lang, stops) {
+  const content = (ws) => ws.filter((w) => !stops.has(w)).map((w) => stem(w, lang)).join(' ');
+  return ` ${content(tokenize(text))} `.includes(` ${content(kwKey.split(' '))} `);
+}
+
 // Minimal markdown → { text, headings }; drops front matter, code, link targets and the reviewer checklist.
 export function parseMarkdown(md) {
-  const src = md.replace(/^---\n[\s\S]*?\n---\n/, '').split(/\n---\n## Review checklist/)[0].replace(/```[\s\S]*?```/g, '');
+  const src = md.replace(/^---\n[\s\S]*?\n---\n/, '').split(/\n---\n## Review checklist/)[0].replace(/```[\s\S]*?```/g, '')
+    .replace(/\[VERIFY:[^\]]*\]/g, ''); // reviewer notes aren't article text
   const headings = [];
   const text = src.split('\n').map((line) => {
     const m = line.match(/^(#{1,6})\s+(.*)$/);
