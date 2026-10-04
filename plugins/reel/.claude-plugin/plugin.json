@@ -1,0 +1,10 @@
+{
+  "name": "reel",
+  "description": "Short vertical motion-graphics videos (Reels/Shorts, 1080x1920, captions) for blog posts, rendered from HTML/JS with Playwright + ffmpeg. Each Reel is a small JSON file, so edits are cheap.",
+  "version": "0.1.0",
+  "author": { "name": "Kamil Kuklewski", "url": "https://github.com/kkuklewski" },
+  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/reel",
+  "repository": "https://github.com/kkuklewski/claude-plugins",
+  "license": "MIT",
+  "keywords": ["claude-code", "skills", "video", "reels", "shorts", "motion-graphics", "playwright", "ffmpeg", "content"]
+}

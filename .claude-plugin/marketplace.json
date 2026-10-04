@@ -34,6 +34,14 @@
       "version": "0.4.0",
       "category": "development",
       "tags": ["seo", "search-console", "ga4", "content", "blog", "dataforseo", "mcp", "content-optimization"]
+    },
+    {
+      "name": "reel",
+      "source": "./plugins/reel",
+      "description": "Short vertical motion-graphics videos (Reels/Shorts, 1080x1920, captions) for blog posts, rendered from HTML/JS with Playwright + ffmpeg. Each Reel is a small JSON file, so edits are cheap.",
+      "version": "0.1.0",
+      "category": "content",
+      "tags": ["video", "reels", "shorts", "motion-graphics", "content", "playwright", "ffmpeg"]
     }
   ]
 }

@@ -1,0 +1,90 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root{--bg:#171717;--text:#f1f5f9;--muted:#94a3b8;--brand:#64748b;--accent:#34d399;--warn:#fbbf24;--bad:#f87171;--card:#232323;--line:#2e2e2e}
+  html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:var(--bg);
+    font-family:"Inter","Helvetica Neue",Arial,sans-serif;color:var(--text)}
+  .scene{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:0 96px;box-sizing:border-box;visibility:hidden}
+  .scene.center{align-items:center;text-align:center}
+  .kicker{font:600 34px/1.2 ui-monospace,Menlo,monospace;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .center .kicker.sub{margin-top:60px}
+  h1{font-size:104px;line-height:1.05;margin:28px 0 0;font-weight:800;letter-spacing:-.03em}
+  .center h1{font-size:120px}
+  .accent{color:var(--accent)}
+  .big{font-size:300px;font-weight:800;letter-spacing:-.05em;line-height:1}
+  .item{display:flex;align-items:center;gap:28px;font-size:52px;font-weight:600;margin:22px 0;
+    padding:30px 36px;background:var(--card);border:2px solid var(--line);border-radius:28px}
+  .item .dot{width:26px;height:26px;border-radius:50%;background:var(--bad);flex:none}
+  .item.ok .dot{background:var(--accent)}
+  code{font-family:ui-monospace,Menlo,monospace;color:var(--warn)}
+  .ring{position:relative;width:640px;height:640px;margin:60px auto 0}
+  .ring svg{transform:rotate(-90deg)}
+  .ringnum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:230px;font-weight:800;letter-spacing:-.05em}
+  .caption{position:absolute;left:72px;right:72px;bottom:250px;text-align:center;font-size:50px;
+    font-weight:700;line-height:1.25;background:rgba(0,0,0,.72);padding:24px 30px;border-radius:20px}
+  .caption:empty{display:none}
+  .brand{position:absolute;top:120px;left:96px;font:600 36px ui-monospace,Menlo,monospace;color:var(--brand)}
+  .bar{position:absolute;left:0;top:0;height:10px;background:var(--accent)}
+</style></head>
+<body>
+<div class="bar" id="bar"></div>
+<div class="brand" id="brand"></div>
+<div id="stage"></div>
+<div class="caption" id="cap"></div>
+<script>
+// The reel config (JSON) is injected by render.mjs as window.REEL before this runs.
+const R = window.REEL;
+const C = 1759.3; // ring circumference (r=280)
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=t=>1-Math.pow(1-clamp(t),3);
+const range=(t,a,b)=>clamp((t-a)/(b-a));
+function show(el,t,a,b,f=.35){
+  const i=ease(range(t,a,a+f)), o=1-ease(range(t,b-f,b)), v=Math.min(i,o);
+  el.style.opacity=v; el.style.transform=`translateY(${(1-i)*60}px)`;
+  el.style.visibility=v>0?'visible':'hidden';
+}
+const h=(tag,cls,html)=>{const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e;};
+
+brand.textContent = R.brand || '';
+for (const [k,v] of Object.entries(R.theme||{})) document.documentElement.style.setProperty('--'+k, v);
+const scenes = R.scenes.map(s => {
+  const el = h('div','scene'+(s.center?' center':''));
+  const ctl = {s, el, update(){}};
+  if (s.kicker && s.type!=='title') el.append(h('div','kicker',s.kicker));
+  if (s.type==='title') {
+    if (s.kicker) el.append(h('div','kicker',s.kicker));
+    el.append(h('h1','',s.html));
+    if (s.sub) el.append(h('div','kicker sub',s.sub));
+  } else if (s.type==='counter') {
+    const big=h('div','big','0'); el.append(big);
+    const items=(s.items||[]).map(t=>{const i=h('div','item'+(s.good?' ok':''),'<span class="dot"></span>'+t); el.append(i); return i;});
+    ctl.update=t=>{
+      big.textContent=Math.round(s.value*ease(range(t,s.start+.2,s.start+1.4)));
+      items.forEach((it,k)=>show(it,t,s.start+.8+k*.35,s.end,.3));
+    };
+  } else if (s.type==='score') {
+    el.querySelector('.kicker').style.textAlign='center';
+    const ring=h('div','ring',`<svg width="640" height="640"><circle cx="320" cy="320" r="280" fill="none" style="stroke:var(--line)" stroke-width="44"/><circle class="arc" cx="320" cy="320" r="280" fill="none" style="stroke:var(--warn)" stroke-width="44" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg><div class="ringnum">0</div>`);
+    el.append(ring);
+    const arc=ring.querySelector('.arc'), num=ring.querySelector('.ringnum');
+    ctl.update=t=>{
+      const p=ease(range(t,s.start+.3,s.start+1.3)), q=ease(range(t,s.start+1.8,s.start+2.6));
+      const v=Math.round(s.from*p+(s.to-s.from)*q), done=q>0.99;
+      num.textContent=v; arc.style.strokeDashoffset=C*(1-v/100);
+      arc.style.stroke=done?'var(--accent)':'var(--warn)'; num.style.color=done?'var(--accent)':'var(--text)';
+    };
+  }
+  stage.append(el);
+  return ctl;
+});
+
+window.seek = function(t){
+  bar.style.width=(t/R.duration*100)+'%';
+  scenes.forEach(c=>{ show(c.el,t,c.s.start,c.s.end); c.update(t); });
+  const c=(R.captions||[]).find(c=>t>=c[0]&&t<c[1]); cap.textContent=c?c[2]:'';
+};
+seek(0);
+</script>
+</body></html>
