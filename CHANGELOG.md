@@ -1,5 +1,10 @@
 # Changelog
 
+## reel 0.1.0 — 2026-10-04
+- New plugin: `/reel` renders a 1080×1920 captioned Reel/Short from a JSON config (scenes: `title`, `counter`, `score`) with Playwright + ffmpeg; `--still <s>` previews one moment.
+- Per-Reel `theme` colors; output in `out/` next to the JSON.
+- Example: the website-audit Reel from kuklewski.com.
+
 ## seo-content 0.2.0 — 2026-09-28
 - Per-client Google keys: `googleKeyFile` in each repo's `.seo-content.json` (a path, never the key) is passed to every Google tool and wins over the plugin's default key, so client IDs and access never mix. The default key in plugin settings is now optional.
 - `/seo-gaps --setup` looks for an existing client key under `~/.config/<client>/` before walking through creating one; no restart needed when the key changes.

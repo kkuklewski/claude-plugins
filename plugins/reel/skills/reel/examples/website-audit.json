@@ -1,0 +1,21 @@
+{
+  "post": "content/posts/website-audit-checklist-claude-code.md",
+  "duration": 12,
+  "fps": 30,
+  "brand": "kuklewski.com",
+  "scenes": [
+    { "type": "title", "start": 0, "end": 2.8, "kicker": "Website audit",
+      "html": "I audited my own site with a <span class=\"accent\">Claude&nbsp;Code</span> skill." },
+    { "type": "counter", "start": 2.8, "end": 6.1, "kicker": "Findings", "value": 23,
+      "items": ["Low text contrast", "Missing <code>&lt;main&gt;</code>", "No <code>&lt;h1&gt;</code> on home"] },
+    { "type": "score", "start": 6.1, "end": 9.5, "kicker": "Mobile Lighthouse · Accessibility", "from": 94, "to": 100 },
+    { "type": "title", "start": 9.5, "end": 12.6, "center": true,
+      "html": "One afternoon.<br><span class=\"accent\">94 → 100.</span>", "sub": "Full checklist on the blog ↓" }
+  ],
+  "captions": [
+    [0, 2.8, "I ran a full audit on my own website"],
+    [2.8, 6, "23 issues across 6 page types"],
+    [6, 9.4, "Fixed contrast, landmarks & headings"],
+    [9.4, 12, "Accessibility: 94 → 100"]
+  ]
+}

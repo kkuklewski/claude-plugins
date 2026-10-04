@@ -16,6 +16,7 @@ web development, QA and AI-assisted engineering. Each plugin is independent — 
 |---|---|---|
 | [site-audit](plugins/site-audit) | `/site-audit` | Pre-launch & regression audit of a website: SEO, Core Web Vitals, accessibility, responsiveness, semantic HTML. Audits every page type, writes a tracked was→now checklist into your repo, re-checks it later. Next.js-first, works on any URL. |
 | [seo-content](plugins/seo-content) | `/seo-gaps`, `/blog-draft` | Content opportunities from your own Google Search Console data (quick wins, cannibalisation, content gaps, decay; optional competitor gaps via pay-as-you-go DataForSEO) → briefs → review-ready blog drafts for your content team. Each user brings their own keys. |
+| [reel](plugins/reel) | `/reel` | Short vertical motion-graphics videos (Reels/Shorts, 1080×1920, captions) for blog posts, rendered from HTML/JS with Playwright + ffmpeg. Each Reel is a small JSON file, so changing a caption or number is a one-line edit and a re-render. |
 | [ladder-adoption](https://github.com/kkuklewski/ladder-adoption) | `/ladder`, `/incident-response` | Find your rung on the Steps of AI Adoption and the next one up. Lives in its own repo; listed here for one-stop install. |
 
 ## Repository layout
