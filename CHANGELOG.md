@@ -1,5 +1,9 @@
 # Changelog
 
+## motion-editor 0.1.0 — 2026-10-06
+- New plugin: `/motion-editor` builds a local, deterministic motion-graphics editor (Vite + React + Canvas `renderFrame`, timeline/keyframes/easing/presets, undo/redo, Playwright + ffmpeg MP4 export) from a strict, test-verified spec adapted from Nate Parrott's prompt.
+- Intake first: asks for resources (logos, fonts, brand) and look references (videos, GIFs, screenshots) by path, samples them into `reference/STYLE.md`, and uses it for the editor's defaults and presets — the app still opens an empty project.
+
 ## seo-content 0.2.0 — 2026-09-28
 - Per-client Google keys: `googleKeyFile` in each repo's `.seo-content.json` (a path, never the key) is passed to every Google tool and wins over the plugin's default key, so client IDs and access never mix. The default key in plugin settings is now optional.
 - `/seo-gaps --setup` looks for an existing client key under `~/.config/<client>/` before walking through creating one; no restart needed when the key changes.

@@ -1,0 +1,10 @@
+{
+  "name": "motion-editor",
+  "description": "Build a local, deterministic motion-graphics editor app (Vite + React + Canvas renderFrame, Playwright + ffmpeg MP4 export) from a strict spec — asks for your resources and look-reference examples first.",
+  "version": "0.1.0",
+  "author": { "name": "Kamil Kuklewski", "url": "https://github.com/kkuklewski" },
+  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/motion-editor",
+  "repository": "https://github.com/kkuklewski/claude-plugins",
+  "license": "MIT",
+  "keywords": ["claude-code", "skills"]
+}
