@@ -134,6 +134,7 @@ async function dfs(login, password, path, task) {
   if (body.status_code === 40200 || body.status_code === 40210) throw new SetupError('DataForSEO balance is empty.', 'Top up your DataForSEO account.');
   if (/verify your account/i.test(body.status_message || '')) throw new SetupError('DataForSEO account is not verified.', 'Complete verification at app.dataforseo.com, then retry.');
   const t = body.tasks?.[0];
+  if (body.status_code === 40204 || t?.status_code === 40204) throw new SetupError(`DataForSEO: the ${path.split('/')[1]} API is not active on this account.`, 'Activate it under app.dataforseo.com → Plans and Subscriptions (the Backlinks API is a separate subscription, not pay-as-you-go).');
   if (!t || t.status_code >= 40000) {
     if (/verify your account/i.test(t?.status_message || '')) throw new SetupError('DataForSEO account is not verified.', 'Complete verification at app.dataforseo.com, then retry.');
     throw new Error(`DataForSEO ${path}: ${t?.status_message || body.status_message || res.status}`);
@@ -193,4 +194,31 @@ export async function dfsContentParsing(login, password, url, opts = {}) {
   if (opts.javascript) Object.assign(task, { enable_javascript: true, enable_browser_rendering: true });
   const { cost, result } = await dfs(login, password, '/on_page/content_parsing/live', task);
   return { cost, pageContent: result?.items?.[0]?.page_content || null };
+}
+
+// Backlink profile totals for a domain (or one URL). ~$0.02. Needs the Backlinks API subscription.
+export async function dfsBacklinksSummary(login, password, target, opts = {}) {
+  const { cost, result: r } = await dfs(login, password, '/backlinks/summary/live', {
+    target, include_subdomains: opts.includeSubdomains ?? true, backlinks_status_type: 'live', internal_list_limit: 10,
+  });
+  const top = (o) => Object.fromEntries(Object.entries(o || {}).sort((a, b) => b[1] - a[1]).slice(0, 10));
+  return {
+    cost,
+    summary: r && {
+      target: r.target,
+      backlinks: r.backlinks,
+      referringDomains: r.referring_domains,
+      referringMainDomains: r.referring_main_domains,
+      referringDomainsNofollow: r.referring_domains_nofollow,
+      referringIps: r.referring_ips,
+      brokenBacklinks: r.broken_backlinks,
+      rank: r.rank,
+      spamScore: r.backlinks_spam_score,
+      firstSeen: r.first_seen,
+      linkTypes: r.referring_links_types,
+      linkAttributes: r.referring_links_attributes,
+      topTlds: top(r.referring_links_tld),
+      topCountries: top(r.referring_links_countries),
+    },
+  };
 }

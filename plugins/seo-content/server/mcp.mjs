@@ -5,7 +5,7 @@
 // sensitive values in their OS keychain). Nothing here is shared between users.
 import { homedir } from 'node:os';
 import { readFile } from 'node:fs/promises';
-import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, dfsRankedKeywords, dfsSearchVolume, dfsSerp, dfsContentParsing } from './lib.mjs';
+import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, dfsRankedKeywords, dfsSearchVolume, dfsSerp, dfsContentParsing, dfsBacklinksSummary } from './lib.mjs';
 import { termPlan, parseMarkdown, fromContentParsing, scoreSavedPlan } from './terms.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -141,6 +141,16 @@ const TOOLS = [
     description: 'PAID (DataForSEO, ~$0.002). Current Google top-10 for a keyword: titles, URLs, descriptions, featured snippet and People-also-ask questions — input for a content brief.',
     inputSchema: { type: 'object', required: ['keyword'], properties: { keyword: str, location_code: { type: 'integer' }, language_code: str } },
     run: async (a) => dfsSerp(dfsLogin(), dfsPassword(), a.keyword, locale(a)),
+  },
+  {
+    name: 'backlinks_summary',
+    description: 'PAID (DataForSEO Backlinks API, ~$0.02; separate subscription). ON REQUEST ONLY — call it when the user explicitly asks about backlinks, never as part of another run. Live backlink totals for a domain or URL: backlinks, referring domains, nofollow share, broken backlinks, rank, spam score, link types, top TLDs and countries.',
+    inputSchema: { type: 'object', required: ['target'], properties: { target: { ...str, description: 'Domain without scheme ("example.com") or a full URL for one page.' }, includeSubdomains: { type: 'boolean', default: true } } },
+    run: async (a) => {
+      const target = /^https?:\/\/[^/]+\/?$/.test(a.target) ? new URL(a.target).hostname.replace(/^www\./, '') : a.target;
+      const { cost, summary } = await dfsBacklinksSummary(dfsLogin(), dfsPassword(), target, { includeSubdomains: a.includeSubdomains });
+      return { costUsd: +(cost || 0).toFixed(4), checkedAt: new Date().toISOString(), ...summary };
+    },
   },
   {
     name: 'term_plan',

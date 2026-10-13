@@ -103,6 +103,8 @@ End with the next command: `/blog-draft <outputDir>/briefs/<slug>.md`.
 - Every number comes from tool output — never invent volumes, positions or traffic. The CTR curve only ranks
   opportunities; call estimates estimates.
 - Paid calls (DataForSEO) only when the user configured it, with the cost stated before the call.
+- `backlinks_summary` is on request only: call it when the user explicitly asks about backlinks or referring
+  domains — never as a step of this workflow, a report or a brief.
 - Search Console only knows queries the site already appears for; when the gap list is short, say so and suggest
   `competitor_gap` rather than guessing keywords.
 - Secrets stay in the MCP server's env: never echo env vars, read the key file, or write credentials into

@@ -62,7 +62,8 @@ Node ≥ 22. No npm install — the MCP server has zero dependencies.
 ## Limits
 - Search Console only knows queries the site already appears for (last 16 months). Brand-new topics need
   `competitor_gap` (DataForSEO) or your own ideas.
-- No backlink data.
+- Backlinks are totals only and on request: ask "how many backlinks does example.com have" → `backlinks_summary`
+  (DataForSEO Backlinks API — a separate subscription, ~$0.02 per check). It never runs as part of `/seo-gaps`.
 - The term plan is a coverage checklist from word statistics, not semantic analysis: expect some generic words
   in the list, and don't write to the numbers.
 - Drafts are drafts: facts are marked `[VERIFY]` for the content team, nothing is published automatically.

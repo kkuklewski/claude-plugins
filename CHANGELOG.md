@@ -1,5 +1,9 @@
 # Changelog
 
+## seo-content 0.5.0 — 2026-10-13
+- New tool `backlinks_summary`: live backlink totals for a domain or URL (backlinks, referring domains, nofollow share, broken links, rank, spam score, top TLDs/countries) via the DataForSEO Backlinks API. On request only — it is never called by `/seo-gaps` or `/blog-draft`.
+- A DataForSEO API that is not active on the account now reports a setup fix instead of a raw error.
+
 ## motion-editor 0.1.0 — 2026-10-06
 - New plugin: `/motion-editor` builds a local, deterministic motion-graphics editor (Vite + React + Canvas `renderFrame`, timeline/keyframes/easing/presets, undo/redo, Playwright + ffmpeg MP4 export) from a strict, test-verified spec adapted from Nate Parrott's prompt.
 - Intake first: asks for resources (logos, fonts, brand) and look references (videos, GIFs, screenshots) by path, samples them into `reference/STYLE.md`, and uses it for the editor's defaults and presets — the app still opens an empty project.

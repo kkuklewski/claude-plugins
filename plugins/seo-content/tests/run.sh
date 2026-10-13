@@ -94,7 +94,7 @@ const by = Object.fromEntries(lines.map((l) => [l.id, l]));
 const fail = [];
 const ok = (c, m) => c || fail.push(m);
 ok(by[1]?.result?.serverInfo?.name === "seo-content", "initialize");
-ok(by[2]?.result?.tools?.length === 9, "tools/list count " + by[2]?.result?.tools?.length);
+ok(by[2]?.result?.tools?.length === 10, "tools/list count " + by[2]?.result?.tools?.length);
 const setup = JSON.parse(by[3]?.result?.content?.[0]?.text || "{}");
 ok(setup.google?.status === "missing" && /plugin/.test(setup.google.fix), "setup_check google missing + fix");
 ok(setup.dataforseo?.status === "off", "setup_check dataforseo off");
