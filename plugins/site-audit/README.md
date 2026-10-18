@@ -33,6 +33,10 @@ record that the next `--recheck` diffs against.
 Node ≥ 22, Chrome or Chromium (or `CHROME_PATH`), [ripgrep](https://github.com/BurntSushi/ripgrep).
 Lighthouse runs through `npx` on first use. No `npm install`.
 
+Works in any Claude Code: terminal, IDE, SSH, CI. The optional interactive pass (keyboard focus, visual sweep at
+several widths, 200 % text) uses the Claude desktop app's built-in browser; elsewhere it is skipped and those rows
+are reported as manual checks. `--quick` skips it everywhere.
+
 ## Per-project config
 
 Optional `.site-audit.json` in the project root — ignored folders, private routes, extra sample pages,

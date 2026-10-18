@@ -1,5 +1,9 @@
 # Changelog
 
+## site-audit 0.2.3 — 2026-10-18
+- Works outside the desktop app: the interactive browser pass (step 2) is skipped when the built-in browser tools aren't available, and its rows are reported as manual checks instead of being improvised; `preview_start` has a terminal fallback.
+- Shorter skill description (the usage line moved into the body) so it stays well under the loader's 1024-character limit.
+
 ## seo-content 0.6.0 — 2026-10-18
 - New tool `ranking_changes`: decay detector for a domain or one page — keywords it lost (DataForSEO Labs "lost" mode) and keywords whose position dropped, each with previous vs current position, 12-month search volume and volume trend, plus new/up/down/lost totals. `/seo-gaps` uses it for refresh work when DataForSEO is on.
 - New tool `keyword_cluster`: grows 1–5 seed keywords into a topic cluster from Keyword Ideas, Related Keywords and Keyword Suggestions, merged into one list that shows which sources found each keyword.

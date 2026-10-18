@@ -1,6 +1,6 @@
 ---
 name: site-audit
-description: Pre-launch / regression quality audit of a website (Next.js-first, works on any URL and other frameworks) — SEO, performance & Core Web Vitals, accessibility, responsiveness, semantic HTML, fonts, images, 3rd-party scripts, GDPR. Audits one sample of EVERY page type (from routes + sitemap), not just the home page; runs code scan, HTTP checks, headless multi-page DOM audit and median-of-3 Lighthouse in one command; writes a tracked was→now checklist into the repo and re-checks it later with before/after diffs. Use when the user says "audit this page/site", "check before launch", "QA the site", "is this SEO/a11y ready", "run the site audit again", "recheck the audit", or invokes /site-audit. Usage: /site-audit [url] [--repo <path>] [--pages types|single|all|N] [--quick] [--recheck] [--fix] [--no-save]
+description: Pre-launch / regression quality audit of a website (Next.js-first, any URL) — SEO, Core Web Vitals, accessibility, responsiveness, semantic HTML, fonts, images, 3rd-party scripts, GDPR. Audits one sample of every page type, runs code scan, HTTP checks, headless DOM audit and median-of-3 Lighthouse in one command, and keeps a tracked was→now checklist in the repo. Use when the user says "audit this page/site", "check before launch", "QA the site", "is this SEO/a11y ready", "run the site audit again", "recheck the audit", or invokes /site-audit.
 ---
 
 # Site audit
@@ -11,6 +11,10 @@ works for a plugin install and a copy in `~/.claude/skills/` alike. Scripts are 
 Requires Node ≥ 22, Chrome/Chromium (or `CHROME_PATH`), ripgrep; Lighthouse runs via `npx`. No npm install.
 
 ## Arguments
+```text
+/site-audit [url] [--repo <path>] [--pages types|single|all|N] [--quick] [--recheck] [--fix] [--no-save]
+```
+
 | Arg | Meaning |
 |---|---|
 | `url` | Site to audit. Omitted → resolve (step 0). |
@@ -34,7 +38,8 @@ add it to `accepted` (create the file if needed) instead of just remembering it 
 
 ### 0. Resolve the target (don't ask if you can find it)
 1. `url` given → use it. Else `.site-audit.json` `localUrl`, else a production-ish config in
-   `<repo>/.claude/launch.json` (name/args containing `prod`/`start`) → `preview_start` by name,
+   `<repo>/.claude/launch.json` (name/args containing `prod`/`start`) → `preview_start` by name (desktop app only;
+   in a terminal session start that command yourself in the background and use its port),
    else a listening server (`lsof -iTCP -sTCP:LISTEN -nP | grep node`), else ask.
 2. **Never trust perf numbers from `next dev`.** `run-all.sh` warns when it detects a dev build.
    Then use the deployed URL, or a production server from launch.json; only if neither exists,
@@ -56,6 +61,11 @@ not the raw JSON**:
 - `pages.json` `notes` — e.g. dynamic routes with no sample URL → tell the user / add to `pages`.
 
 ### 2. Interactive browser pass (built-in browser; skip with --quick)
+**Needs the desktop app's built-in browser** (`preview_start`, `javascript_tool`, `computer`, `resize_window`).
+No such tools in this session (plain terminal Claude Code, CI, SSH) → skip this step, don't improvise with other
+browsers, and mark keyboard, focus, visual-sweep and 200 % text rows 👁 *manual check needed* in the report, saying
+what to look at. The scripts in step 1 already cover everything else and run anywhere with Node ≥ 22 + Chrome.
+
 Only what scripts can't judge — on the home page (shared layout) plus any template with menus/dialogs:
 - **Keyboard:** Tab ×15 reading `document.activeElement.outerHTML.slice(0,120)`; first stop = skip link;
   focus ring visible (zoom screenshot); dropdowns: Enter/Space opens, Esc closes and returns focus, closed items not tabbable;
