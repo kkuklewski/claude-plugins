@@ -6,12 +6,14 @@ description: Find content opportunities from a site's own Google Search Console 
 # SEO gaps → content briefs
 
 Data comes from the plugin's **seo-content MCP server** (tools `setup_check`, `gsc_opportunities`, `gsc_query`,
-`ga4_landing_pages`, `competitor_gap`, `keyword_volume`, `serp_snapshot`, `term_plan`). Credentials never leave the user's machine:
+`ga4_landing_pages`, `competitor_gap`, `keyword_volume`, `serp_snapshot`, `term_plan`, `ranking_changes`, `keyword_cluster`). Credentials never leave the user's machine:
 - **Google key — per client:** `googleKeyFile` in the repo's `.seo-content.json` is a *path* to that client's
   service-account JSON (e.g. `~/.config/<client>/sa.json`). Pass it as `keyFile` to **every** Google tool call
   (`setup_check`, `gsc_*`, `ga4_*`, `competitor_gap`). No `googleKeyFile` → the tools fall back to the optional
   default key from `/plugin configure seo-content@kkuklewski`.
-- **DataForSEO (optional):** login/password in the plugin settings, password in the OS keychain.
+- **DataForSEO (optional):** login/password in the plugin settings, password in the OS keychain. Every DataForSEO
+  tool needs `location_code` + `language_code` — always pass them from `locale` in `.seo-content.json`; the tools
+  refuse to guess (no US default).
 **Never ask for, print, or write a key, password or key-file contents** — not in chat, not in the repo.
 
 ## Arguments
@@ -65,6 +67,10 @@ voice, wordCount, cta, avoidTopics, reviewers). No repo → keep the config in t
   work on pages nobody engages with.
 - Competitors configured (or `--competitors`) and DataForSEO on → **state the estimated cost first**
   (~$0.01–0.05 per competitor), then `competitor_gap`. DataForSEO off → skip (preflight already said so).
+- DataForSEO on and the run includes refresh work (`decay` non-empty or `--refresh-only`) → state the cost
+  (~$0.03–0.05 per target), then `ranking_changes` for the site's domain; for the top 3 decaying pages call it again
+  with the page as `target`. `lost` = keywords the page no longer ranks for; `down` rows with a falling
+  `monthlyVolume`/`volumeTrend` are lost demand, not lost rankings — say which, because only the latter needs a refresh.
 - Existing content: fetch `<siteOrigin>/sitemap.xml` (follow nested sitemaps, cap 500 URLs) to know which posts
   exist. For an opportunity that points at an existing URL, read that page's title/H1/H2s before choosing
   "refresh" vs "new post" — never propose a post that duplicates an existing one.
@@ -77,7 +83,7 @@ voice, wordCount, cta, avoidTopics, reviewers). No repo → keep the config in t
 | `strikingDistance` on a matching page | **Refresh**: missing subtopics, FAQ, internal links |
 | `lowCtr` | **Snippet rewrite**: title + meta description, 2 variants |
 | `cannibalisation` | **Consolidate**: pick the canonical page; merge + redirect, or de-optimise the other |
-| `decay` | **Refresh** — `gsc_query` with `pageContains` shows which queries were lost |
+| `decay` | **Refresh** — `gsc_query` with `pageContains` shows which queries were lost; `ranking_changes` (if run) adds lost/dropped keywords and whether demand fell |
 
 Cluster same-intent queries (plurals, word order, synonyms) into one opportunity before ranking. Drop anything
 in `blog.avoidTopics`. With `--refresh-only`, skip New post rows. Rank by potential clicks × business fit
@@ -92,7 +98,8 @@ Into `<outputDir>/` (create it):
   with `exclude: [<siteOrigin host>]` and `savePlan: <absolute path>/briefs/<slug>.plan.json` (~$0.004–0.02 each;
   state the total first) fills "What ranks now" (top-10
   URLs + People-also-ask) and "Term plan" (length, H2/H3 count, the top ~25 terms with use ranges, heading terms,
-  questions). Use it to shape the outline: H2s cover the heading terms and questions that fit our angle; answer
+  questions). For pillar topics or a brief whose cluster from Search Console is thin, `keyword_cluster` with the
+  primary keyword (~$0.05 per seed; state it) adds secondary keywords — prefer rows found by 2–3 `sources`. Use the plan to shape the outline: H2s cover the heading terms and questions that fit our angle; answer
   the People-also-ask questions in the FAQ. When the top-10 is a different page type than planned (e.g. city
   landing pages for a how-to), note the intent mismatch and consider a closer keyword. Off → write
   `not checked — DataForSEO off` in both sections and build the outline from the site's own query cluster.
@@ -103,7 +110,7 @@ End with the next command: `/blog-draft <outputDir>/briefs/<slug>.md`.
 - Every number comes from tool output — never invent volumes, positions or traffic. The CTR curve only ranks
   opportunities; call estimates estimates.
 - Paid calls (DataForSEO) only when the user configured it, with the cost stated before the call.
-- `backlinks_summary` is on request only: call it when the user explicitly asks about backlinks or referring
+- `backlinks_summary` (pay-as-you-go, ~$0.024) is on request only: call it when the user explicitly asks about backlinks or referring
   domains — never as a step of this workflow, a report or a brief.
 - Search Console only knows queries the site already appears for; when the gap list is short, say so and suggest
   `competitor_gap` rather than guessing keywords.

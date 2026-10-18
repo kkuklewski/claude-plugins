@@ -5,7 +5,7 @@
 // sensitive values in their OS keychain). Nothing here is shared between users.
 import { homedir } from 'node:os';
 import { readFile } from 'node:fs/promises';
-import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, dfsRankedKeywords, dfsSearchVolume, dfsSerp, dfsContentParsing, dfsBacklinksSummary } from './lib.mjs';
+import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, assertDfs, requireLocale, dfsRankedKeywords, dfsKeywordCluster, dfsSearchVolume, dfsSerp, dfsContentParsing, dfsBacklinksSummary } from './lib.mjs';
 import { termPlan, parseMarkdown, fromContentParsing, scoreSavedPlan } from './terms.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -25,9 +25,12 @@ const day = (offset) => new Date(Date.now() - offset * 86_400_000).toISOString()
 const LAG = 3;
 const period = (days) => ({ startDate: day(LAG + days - 1), endDate: day(LAG) });
 const prevWindow = (days) => ({ startDate: day(LAG + 2 * days - 1), endDate: day(LAG + days) });
-const locale = (a) => ({ location_code: a.location_code ?? 2840, language_code: a.language_code ?? 'en' });
-
 const str = { type: 'string' };
+// Credentials are checked before the locale so an unconfigured user gets the setup message, not a locale error.
+const locale = (a) => { assertDfs(dfsLogin(), dfsPassword()); return requireLocale(a); };
+const localeArgs = { location_code: { type: 'integer', description: 'locale.location_code from .seo-content.json (Poland 2616, Germany 2276, UK 2826, US 2840)' }, language_code: { ...str, description: 'locale.language_code from .seo-content.json (pl, de, en)' } };
+const LOCALE = ['location_code', 'language_code'];
+
 const TOOLS = [
   {
     name: 'setup_check',
@@ -118,13 +121,14 @@ const TOOLS = [
     name: 'competitor_gap',
     description: 'PAID (DataForSEO, ~$0.01–0.05 per competitor). Keywords competitors rank top-20 for where this site has no top-20 position in Search Console. Sorted by how many competitors share the keyword, then volume.',
     inputSchema: {
-      type: 'object', required: ['siteUrl', 'competitors'],
-      properties: { ...keyArg, siteUrl: str, competitors: { type: 'array', items: str, maxItems: 5 }, location_code: { type: 'integer' }, language_code: str, limit: { type: 'integer', default: 200 } },
+      type: 'object', required: ['siteUrl', 'competitors', ...LOCALE],
+      properties: { ...keyArg, siteUrl: str, competitors: { type: 'array', items: str, maxItems: 5 }, ...localeArgs, limit: { type: 'integer', default: 200 } },
     },
     run: async (a) => {
+      const loc = locale(a);
       const [ownRows, ...competitorItems] = await Promise.all([
         gscQuery(await loadServiceAccount(keyFile(a)), a.siteUrl, { ...period(90), dimensions: ['query'], maxRows: 25000 }),
-        ...a.competitors.slice(0, 5).map(async (c) => ({ competitor: c, ...(await dfsRankedKeywords(dfsLogin(), dfsPassword(), c, { ...locale(a), limit: a.limit ?? 200 })) })),
+        ...a.competitors.slice(0, 5).map(async (c) => ({ competitor: c, ...(await dfsRankedKeywords(dfsLogin(), dfsPassword(), c, { ...loc, limit: a.limit ?? 200 })) })),
       ]);
       const cost = competitorItems.reduce((s, c) => s + (c.cost || 0), 0);
       return { costUsd: +cost.toFixed(4), gaps: competitorGap(competitorItems, ownRows) };
@@ -133,18 +137,62 @@ const TOOLS = [
   {
     name: 'keyword_volume',
     description: 'PAID (DataForSEO). Monthly search volume, CPC, difficulty and intent for up to 700 keywords.',
-    inputSchema: { type: 'object', required: ['keywords'], properties: { keywords: { type: 'array', items: str }, location_code: { type: 'integer' }, language_code: str } },
+    inputSchema: { type: 'object', required: ['keywords', ...LOCALE], properties: { keywords: { type: 'array', items: str }, ...localeArgs } },
     run: async (a) => dfsSearchVolume(dfsLogin(), dfsPassword(), a.keywords, locale(a)),
   },
   {
     name: 'serp_snapshot',
     description: 'PAID (DataForSEO, ~$0.002). Current Google top-10 for a keyword: titles, URLs, descriptions, featured snippet and People-also-ask questions — input for a content brief.',
-    inputSchema: { type: 'object', required: ['keyword'], properties: { keyword: str, location_code: { type: 'integer' }, language_code: str } },
+    inputSchema: { type: 'object', required: ['keyword', ...LOCALE], properties: { keyword: str, ...localeArgs } },
     run: async (a) => dfsSerp(dfsLogin(), dfsPassword(), a.keyword, locale(a)),
   },
   {
+    name: 'ranking_changes',
+    description: 'PAID (DataForSEO Labs, ~$0.03–0.05). Decay detector for a domain or one page: keywords it LOST (ranked before, gone at the last weekly check) and keywords whose position went DOWN, each with previous vs current position, 12-month search volume and volume trend — so a drop can be told apart from falling demand. Plus totals of new/up/down/lost rankings. Use for refresh planning next to gsc_opportunities.decay.',
+    inputSchema: {
+      type: 'object', required: ['target', ...LOCALE],
+      properties: {
+        target: { ...str, description: 'Domain ("example.com") or one page without scheme ("example.com/blog/post"); a full URL is accepted too.' },
+        ...localeArgs, limit: { type: 'integer', default: 100, description: 'Rows per list (lost, down); billed per returned row' },
+      },
+    },
+    run: async (a) => {
+      const loc = locale(a);
+      const target = a.target.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+      const limit = a.limit ?? 100;
+      const [lost, down] = await Promise.all([
+        dfsRankedKeywords(dfsLogin(), dfsPassword(), target, { ...loc, mode: 'lost', limit, detail: true }),
+        dfsRankedKeywords(dfsLogin(), dfsPassword(), target, { ...loc, limit, detail: true, filters: [['ranked_serp_element.serp_item.rank_changes.is_down', '=', true]] }),
+      ]);
+      const m = down.metrics || {};
+      return {
+        costUsd: +((lost.cost || 0) + (down.cost || 0)).toFixed(4), target, checkedAt: new Date().toISOString(),
+        totals: { new: m.is_new ?? null, up: m.is_up ?? null, down: m.is_down ?? null, lost: m.is_lost ?? null },
+        lost: lost.items, down: down.items.map((i) => ({ ...i, drop: i.previousPosition && i.position ? i.position - i.previousPosition : null })),
+      };
+    },
+  },
+  {
+    name: 'keyword_cluster',
+    description: 'PAID (DataForSEO Labs, ~$0.05 per seed at the default limit). Grow 1–5 seed keywords into a topic cluster from three sources — Keyword Ideas (same categories), Related Keywords (Google\'s "searches related to") and Keyword Suggestions (seed phrase plus words around it) — merged into one list with volume, CPC, difficulty, intent, yearly trend and which sources found each keyword (found by more = more central). For pillar/cluster planning and the secondary keywords of a brief.',
+    inputSchema: {
+      type: 'object', required: ['seeds', ...LOCALE],
+      properties: {
+        seeds: { type: 'array', items: str, minItems: 1, maxItems: 5 }, ...localeArgs,
+        limit: { type: 'integer', default: 50, description: 'Rows per endpoint call; billed per returned row' },
+        depth: { type: 'integer', default: 2, description: 'Related Keywords depth: 1 = up to 8, 2 = up to 72 related searches' },
+        minVolume: { type: 'integer', default: 10 }, top: { type: 'integer', default: 150 },
+      },
+    },
+    run: async (a) => {
+      const loc = locale(a);
+      const { cost, ...out } = await dfsKeywordCluster(dfsLogin(), dfsPassword(), a.seeds.slice(0, 5), { ...loc, limit: a.limit, depth: a.depth, minVolume: a.minVolume, top: a.top });
+      return { costUsd: +(cost || 0).toFixed(4), ...out };
+    },
+  },
+  {
     name: 'backlinks_summary',
-    description: 'PAID (DataForSEO Backlinks API, ~$0.02; separate subscription). ON REQUEST ONLY — call it when the user explicitly asks about backlinks, never as part of another run. Live backlink totals for a domain or URL: backlinks, referring domains, nofollow share, broken backlinks, rank, spam score, link types, top TLDs and countries.',
+    description: 'PAID (DataForSEO Backlinks API, ~$0.024 per check, pay-as-you-go from the balance). ON REQUEST ONLY — call it when the user explicitly asks about backlinks, never as part of another run. Live backlink totals for a domain or URL: backlinks, referring domains, nofollow share, broken backlinks, rank, spam score, link types, top TLDs and countries.',
     inputSchema: { type: 'object', required: ['target'], properties: { target: { ...str, description: 'Domain without scheme ("example.com") or a full URL for one page.' }, includeSubdomains: { type: 'boolean', default: true } } },
     run: async (a) => {
       const target = /^https?:\/\/[^/]+\/?$/.test(a.target) ? new URL(a.target).hostname.replace(/^www\./, '') : a.target;
@@ -158,7 +206,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object', required: ['keyword'],
       properties: {
-        keyword: str, location_code: { type: 'integer' }, language_code: str,
+        keyword: str, ...localeArgs,
         exclude: { type: 'array', items: str, description: 'Domains to leave out, e.g. your own site (siteOrigin host) — social networks and directory sites (oferteo, panoramafirm…) are always skipped' },
         draftFile: { ...str, description: 'Absolute path to a markdown draft to score against the plan' },
         savePlan: { ...str, description: 'Absolute path (.json) to save the plan to, e.g. next to the brief. Score later drafts against it with planFile.' },
@@ -174,7 +222,8 @@ const TOOLS = [
         const saved = JSON.parse(await readFile(path(a.planFile), 'utf8'));
         return { keyword: saved.keyword?.phrase, plannedAt: saved.plannedAt, costUsd: 0, draftScore: scoreSavedPlan(saved, draft) };
       }
-      const serp = await dfsSerp(dfsLogin(), dfsPassword(), a.keyword, { ...locale(a), depth: 20 });
+      const loc = locale(a);
+      const serp = await dfsSerp(dfsLogin(), dfsPassword(), a.keyword, { ...loc, depth: 20 });
       const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
       const skip = new Set([...(a.exclude || []).map((d) => host(d.includes('://') ? d : `https://${d}`)), ...SOCIAL, ...DIRECTORIES]);
       const urls = serp.items.filter((i) => i.type === 'organic' && i.url && ![...skip].some((d) => host(i.url) === d || host(i.url).endsWith(`.${d}`)))
@@ -198,12 +247,12 @@ const TOOLS = [
         }
       }));
       const paa = serp.items.filter((i) => i.type === 'people_also_ask').flatMap((i) => i.questions);
-      const lang = (a.language_code || 'en').slice(0, 2);
+      const lang = loc.language_code.slice(0, 2);
       const { scoring, ...plan } = termPlan(pages, { keyword: a.keyword, lang, paa, draft, minShare: a.minShare });
       let saved;
       if (a.savePlan && !plan.error) {
         await mkdir(dirname(path(a.savePlan)), { recursive: true });
-        await writeFile(path(a.savePlan), JSON.stringify({ plannedAt: new Date().toISOString().slice(0, 10), locale: locale(a), ...plan, scoring }, null, 1) + '\n');
+        await writeFile(path(a.savePlan), JSON.stringify({ plannedAt: new Date().toISOString().slice(0, 10), locale: loc, ...plan, scoring }, null, 1) + '\n');
         saved = path(a.savePlan);
       }
       return { keyword: a.keyword, costUsd: +cost.toFixed(4), ...(saved && { savedTo: saved }), ...plan };
@@ -229,7 +278,7 @@ async function handle(req) {
     return send({ id, result: {
       protocolVersion: params.protocolVersion || '2025-06-18',
       capabilities: { tools: {} },
-      serverInfo: { name: 'seo-content', version: '0.3.0' },
+      serverInfo: { name: 'seo-content', version: '0.6.0' },
     } });
   }
   if (method === 'tools/list') return send({ id, result: { tools: TOOLS.map(({ run, ...t }) => t) } });

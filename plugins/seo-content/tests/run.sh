@@ -76,6 +76,66 @@ if (fail.length) { console.log("FAIL terms:", fail.join("; ")); process.exit(1);
 console.log("PASS term plan — 14 checks");
 ' "$SRV" || exit 1
 
+# DataForSEO helpers that need no network: cluster merge, strict locale (no silent US fallback).
+node --input-type=module -e '
+const { mergeCluster, requireLocale } = await import(process.argv[1] + "/lib.mjs");
+const fail = []; const ok = (c, m) => c || fail.push(m);
+const m = mergeCluster([
+  ["ideas", [{ keyword: "Pflegedienst Kosten", volume: 900 }, { keyword: "pflegegrad 2", volume: 5000 }]],
+  ["related", [{ keyword: "pflegedienst kosten", volume: null, difficulty: 30 }]],
+  ["suggestions", [{ keyword: "pflegedienst kosten ", volume: 900 }, { keyword: "pflegedienst in der nähe", volume: 2000 }]],
+]);
+ok(m[0].keyword === "pflegedienst kosten" && m[0].sources.join() === "ideas,related,suggestions", "merge dedupes case/space and keeps sources: " + JSON.stringify(m[0]));
+ok(m[0].volume === 900 && m[0].difficulty === 30, "merge fills missing fields from other sources");
+ok(m[1].keyword === "pflegegrad 2" && m.length === 3, "single-source rows sorted by volume");
+ok(mergeCluster([["ideas", m]], { top: 1 }).length === 1, "top caps the list");
+let threw = ""; try { requireLocale({}); } catch (e) { threw = e.message; }
+ok(/2616/.test(threw) && /2276/.test(threw), "missing locale throws with examples");
+let threw2 = ""; try { requireLocale({ location_code: "2276", language_code: "de" }); } catch (e) { threw2 = e.message; }
+ok(threw2, "string location_code rejected");
+ok(requireLocale({ location_code: 2616, language_code: "pl" }).location_code === 2616, "valid locale passes");
+if (fail.length) { console.log("FAIL dataforseo helpers:", fail.join("; ")); process.exit(1); }
+console.log("PASS dataforseo helpers — 7 checks");
+' "$SRV" || exit 1
+
+# Request bodies and response mapping against a stubbed fetch (fixture shapes from the DataForSEO docs).
+node --input-type=module -e '
+const sent = [];
+const reply = (result) => ({ status: 200, json: async () => ({ status_code: 20000, tasks: [{ status_code: 20000, cost: 0.02, result }] }) });
+globalThis.fetch = async (url, init) => {
+  const path = new URL(url).pathname; const task = JSON.parse(init.body)[0]; sent.push({ path, task });
+  const kw = (keyword, volume) => ({ keyword, keyword_info: { search_volume: volume, cpc: 1, search_volume_trend: { yearly: -20 }, monthly_searches: [{ year: 2026, month: 2, search_volume: 90 }, { year: 2025, month: 12, search_volume: 120 }] }, keyword_properties: { keyword_difficulty: 12 }, search_intent_info: { main_intent: "informational" } });
+  if (path.endsWith("/ranked_keywords/live")) return reply([{ total_count: 1, metrics: { organic: { is_new: 1, is_up: 2, is_down: 3, is_lost: 4 } }, items: [{ keyword_data: kw("pflegegrad 2", 5000), ranked_serp_element: { serp_item: { rank_group: 14, url: "https://a.de/x", rank_changes: { previous_rank_absolute: 6, is_down: true } } } }] }]);
+  if (path.endsWith("/keyword_ideas/live")) return reply([{ items: [kw("pflegegrad 2", 5000), kw("pflegegrad rechner", 800)] }]);
+  if (path.endsWith("/related_keywords/live")) return reply([{ items: [{ depth: 1, keyword_data: kw("Pflegegrad Rechner", 800) }] }]);
+  if (path.endsWith("/keyword_suggestions/live")) return reply([{ seed_keyword: "pflegegrad" }, { items: [kw("pflegegrad 2 leistungen", 300)] }]);
+  throw new Error("unexpected " + path);
+};
+const { dfsRankedKeywords, dfsKeywordCluster } = await import(process.argv[1] + "/lib.mjs");
+const fail = []; const ok = (c, m) => c || fail.push(m);
+const loc = { location_code: 2276, language_code: "de" };
+const lost = await dfsRankedKeywords("l", "p", "a.de/x", { ...loc, mode: "lost", detail: true });
+ok(sent[0].task.historical_serp_mode === "lost" && !sent[0].task.filters, "lost mode: no live position filter " + JSON.stringify(sent[0].task));
+ok(lost.items[0].change === "lost", "lost rows marked lost");
+const down = await dfsRankedKeywords("l", "p", "a.de", { ...loc, detail: true, filters: [["ranked_serp_element.serp_item.rank_changes.is_down", "=", true]] });
+const d = down.items[0];
+ok(sent[1].task.historical_serp_mode === "live" && sent[1].task.filters[0][0].endsWith("is_down"), "down filter sent");
+ok(d.change === "down" && d.previousPosition === 6 && d.position === 14, "rank change mapped " + JSON.stringify(d));
+ok(d.monthlyVolume.map((x) => x.month).join() === "2025-12,2026-02" && d.volumeTrend.yearly === -20, "monthly volume oldest first + trend");
+ok(down.metrics.is_lost === 4, "totals passed through");
+const plain = await dfsRankedKeywords("l", "p", "b.de", loc);
+ok(!("monthlyVolume" in plain.items[0]) && sent[2].task.filters[0][2] === 20, "competitor_gap shape unchanged (no detail, top-20 filter)");
+sent.length = 0;
+const c = await dfsKeywordCluster("l", "p", ["pflegegrad"], loc);
+ok(sent.map((x) => x.path.split("/")[4]).sort().join() === "keyword_ideas,keyword_suggestions,related_keywords", "three endpoints called");
+ok(sent.every((x) => x.task.location_code === 2276 && x.task.language_code === "de"), "locale sent to every endpoint");
+ok(c.keywords[0].keyword === "pflegegrad rechner" && c.keywords[0].sources.length === 2, "cross-source keyword ranks first " + JSON.stringify(c.keywords[0]));
+ok(c.keywords.some((k) => k.keyword === "pflegegrad 2 leistungen"), "suggestions items read from the second result element");
+ok(Math.abs(c.cost - 0.06) < 1e-9, "cost summed " + c.cost);
+if (fail.length) { console.log("FAIL dataforseo mapping:", fail.join("; ")); process.exit(1); }
+console.log("PASS dataforseo requests + mapping (stubbed) — 12 checks");
+' "$SRV" || exit 1
+
 # MCP handshake: initialize → tools/list → setup_check with no key, then with a non-service-account file.
 BAD=$(mktemp -d)/bad.json; echo '{"type":"authorized_user"}' > "$BAD"; trap 'rm -rf "$(dirname "$BAD")"' EXIT
 mcp() {
@@ -94,7 +154,7 @@ const by = Object.fromEntries(lines.map((l) => [l.id, l]));
 const fail = [];
 const ok = (c, m) => c || fail.push(m);
 ok(by[1]?.result?.serverInfo?.name === "seo-content", "initialize");
-ok(by[2]?.result?.tools?.length === 10, "tools/list count " + by[2]?.result?.tools?.length);
+ok(by[2]?.result?.tools?.length === 12, "tools/list count " + by[2]?.result?.tools?.length);
 const setup = JSON.parse(by[3]?.result?.content?.[0]?.text || "{}");
 ok(setup.google?.status === "missing" && /plugin/.test(setup.google.fix), "setup_check google missing + fix");
 ok(setup.dataforseo?.status === "off", "setup_check dataforseo off");
@@ -127,3 +187,19 @@ console.log("PASS per-client keyFile overrides default, no content leak");
   "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"setup_check\",\"arguments\":{\"keyFile\":\"/etc/hosts\"}}}" \
   | env -i PATH="$PATH" SEO_GOOGLE_KEY_FILE="$BAD" node "$SRV/mcp.mjs" & P=$!; sleep 1.5; kill $P 2>/dev/null; wait $P 2>/dev/null) || { rm -rf "$(dirname "$LEAK")"; exit 1; }
 rm -rf "$(dirname "$LEAK")"
+
+# Paid tools with credentials but no locale fail before any network call, with the codes to use.
+node -e '
+const lines = require("fs").readFileSync(0, "utf8").trim().split("\n").map(JSON.parse);
+const fail = [];
+for (const id of [1, 2, 3]) {
+  const r = lines.find((l) => l.id === id)?.result;
+  if (!r?.isError || !/location_code and language_code are required/.test(r.content[0].text)) fail.push(id + ": " + JSON.stringify(r));
+}
+if (fail.length) { console.log("FAIL locale required:", fail.join("; ")); process.exit(1); }
+console.log("PASS paid tools refuse to guess a locale");
+' < <(printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"serp_snapshot","arguments":{"keyword":"x"}}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"keyword_cluster","arguments":{"seeds":["x"]}}}' \
+  '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ranking_changes","arguments":{"target":"example.com","location_code":2616}}}' \
+  | env -i PATH="$PATH" DATAFORSEO_LOGIN=fake DATAFORSEO_PASSWORD=fake node "$SRV/mcp.mjs" & P=$!; sleep 1.5; kill $P 2>/dev/null; wait $P 2>/dev/null) || exit 1

@@ -1,5 +1,11 @@
 # Changelog
 
+## seo-content 0.6.0 — 2026-10-18
+- New tool `ranking_changes`: decay detector for a domain or one page — keywords it lost (DataForSEO Labs "lost" mode) and keywords whose position dropped, each with previous vs current position, 12-month search volume and volume trend, plus new/up/down/lost totals. `/seo-gaps` uses it for refresh work when DataForSEO is on.
+- New tool `keyword_cluster`: grows 1–5 seed keywords into a topic cluster from Keyword Ideas, Related Keywords and Keyword Suggestions, merged into one list that shows which sources found each keyword.
+- **Breaking:** paid DataForSEO tools no longer fall back to US/English when no locale is passed — `location_code` and `language_code` are required (from `locale` in `.seo-content.json`; Poland 2616/pl, Germany 2276/de). A German or Polish site queried with US data used to look plausible and be wrong.
+- Backlinks wording fixed: the Backlinks API is pay-as-you-go from the balance (~$0.024 per check), not a separate subscription.
+
 ## seo-content 0.5.0 — 2026-10-13
 - New tool `backlinks_summary`: live backlink totals for a domain or URL (backlinks, referring domains, nofollow share, broken links, rank, spam score, top TLDs/countries) via the DataForSEO Backlinks API. On request only — it is never called by `/seo-gaps` or `/blog-draft`.
 - A DataForSEO API that is not active on the account now reports a setup fix instead of a raw error.

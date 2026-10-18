@@ -30,8 +30,8 @@ and only draft after the user agrees.
    - Cover every H2 in the outline; add an FAQ section only if the brief has questions.
    - Secondary keywords only where they read naturally. No keyword stuffing, no filler, no "In today's
      fast-paced world".
-   - **Term plan** (brief section, or run `term_plan` for the primary keyword when the brief has none and
-     DataForSEO is on): treat it as a coverage checklist — cover the subtopics behind the terms, use heading terms
+   - **Term plan** (brief section, or run `term_plan` for the primary keyword with the `locale` from
+     `.seo-content.json` when the brief has none and DataForSEO is on): treat it as a coverage checklist — cover the subtopics behind the terms, use heading terms
      in H2/H3 where they fit, answer the listed questions. Aim for the lower end of each range; a term that doesn't
      fit our product or angle is skipped, not forced in. Length follows the plan's median when it's inside
      `wordCount`, otherwise `wordCount` wins.
@@ -57,7 +57,7 @@ and only draft after the user agrees.
 7. **Score it**: the brief has a saved plan (`<slug>.plan.json` next to it) → `term_plan` with
    `planFile: <that path>` and `draftFile: <absolute path of the draft>` — free, and every revision is scored against
    the same competitors (Google's top 10 changes between runs). No saved plan and DataForSEO on → `term_plan` with the
-   primary keyword, `exclude: [<siteOrigin host>]`, `savePlan` next to the brief and `draftFile`. Score < 70 → one revision pass on the `missing` terms that read
+   primary keyword, `location_code` + `language_code` from `locale` in `.seo-content.json` (required — no US default), `exclude: [<siteOrigin host>]`, `savePlan` next to the brief and `draftFile`. Score < 70 → one revision pass on the `missing` terms that read
    naturally (and trim anything in `overused`), then score again. Never chase 100: a lower score with honest,
    readable copy beats a stuffed one. Put the final score and the terms left out on purpose in the checklist.
 8. Set the brief's `status: draft`. Report: file path, word count, term-plan score, number of `[VERIFY]`

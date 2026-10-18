@@ -121,9 +121,13 @@ export async function ga4Report(sa, propertyId, { startDate, endDate, dimensions
 // ---------- DataForSEO (optional, pay-as-you-go) ----------
 export function dfsConfigured(login, password) { return Boolean(login && password); }
 
-async function dfs(login, password, path, task) {
+export function assertDfs(login, password) {
   if (!dfsConfigured(login, password)) throw new SetupError('DataForSEO is not configured (optional).',
     'Competitor/volume data is off. To enable it, create your own DataForSEO account and set login + password under /plugin → seo-content → Configure.');
+}
+
+async function dfs(login, password, path, task) {
+  assertDfs(login, password);
   const res = await fetch(`${DFS}${path}`, {
     method: 'POST',
     headers: { authorization: `Basic ${Buffer.from(`${login}:${password}`).toString('base64')}`, 'content-type': 'application/json' },
@@ -134,36 +138,121 @@ async function dfs(login, password, path, task) {
   if (body.status_code === 40200 || body.status_code === 40210) throw new SetupError('DataForSEO balance is empty.', 'Top up your DataForSEO account.');
   if (/verify your account/i.test(body.status_message || '')) throw new SetupError('DataForSEO account is not verified.', 'Complete verification at app.dataforseo.com, then retry.');
   const t = body.tasks?.[0];
-  if (body.status_code === 40204 || t?.status_code === 40204) throw new SetupError(`DataForSEO: the ${path.split('/')[1]} API is not active on this account.`, 'Activate it under app.dataforseo.com → Plans and Subscriptions (the Backlinks API is a separate subscription, not pay-as-you-go).');
+  if (body.status_code === 40204 || t?.status_code === 40204) throw new SetupError(`DataForSEO: the ${path.split('/')[1]} API is not active on this account.`, 'All DataForSEO APIs are pay-as-you-go from the account balance — check API access at app.dataforseo.com or ask DataForSEO support to enable it.');
   if (!t || t.status_code >= 40000) {
     if (/verify your account/i.test(t?.status_message || '')) throw new SetupError('DataForSEO account is not verified.', 'Complete verification at app.dataforseo.com, then retry.');
     throw new Error(`DataForSEO ${path}: ${t?.status_message || body.status_message || res.status}`);
   }
-  return { cost: t.cost, result: t.result?.[0] };
+  // Some Labs endpoints (keyword_suggestions) put the items in a different result element than the seed data.
+  return { cost: t.cost, result: t.result?.find((r) => r?.items) ?? t.result?.[0] };
 }
 
-const locale = ({ location_code = 2840, language_code = 'en' } = {}) => ({ location_code, language_code });
+// No silent fallback to US/English: a German or Polish site queried with US data looks plausible and is wrong.
+// The skill passes `locale` from .seo-content.json (Poland 2616/pl, Germany 2276/de, UK 2826/en, US 2840/en).
+export function requireLocale({ location_code, language_code } = {}) {
+  if (!Number.isInteger(location_code) || !language_code) {
+    throw new Error('location_code and language_code are required — pass `locale` from .seo-content.json (e.g. Poland 2616/"pl", Germany 2276/"de", UK 2826/"en", US 2840/"en").');
+  }
+  return { location_code, language_code };
+}
 
-export async function dfsRankedKeywords(login, password, domain, opts = {}) {
-  const { cost, result } = await dfs(login, password, '/dataforseo_labs/google/ranked_keywords/live', {
-    target: domain, ...locale(opts), limit: opts.limit ?? 200,
-    filters: [['ranked_serp_element.serp_item.rank_group', '<=', opts.maxPosition ?? 20]],
-    order_by: ['keyword_data.keyword_info.search_volume,desc'],
+const ym = (m) => `${m.year}-${String(m.month).padStart(2, '0')}`;
+// Oldest → newest, so the list reads as a trend line.
+const monthly = (info) => (info?.monthly_searches || []).map((m) => ({ month: ym(m), volume: m.search_volume })).sort((a, b) => a.month.localeCompare(b.month));
+
+// mode: 'live' (ranks now), 'lost' (ranked before, gone at the last check), 'all'. detail adds the 12-month volume
+// history, the volume trend and the rank change against the previous check — the decay signals.
+export async function dfsRankedKeywords(login, password, target, opts = {}) {
+  const mode = opts.mode ?? 'live';
+  const task = { target, ...requireLocale(opts), limit: opts.limit ?? 200, historical_serp_mode: mode, order_by: ['keyword_data.keyword_info.search_volume,desc'] };
+  if (opts.maxPosition !== null && mode === 'live') task.filters = [['ranked_serp_element.serp_item.rank_group', '<=', opts.maxPosition ?? 20]];
+  if (opts.filters) task.filters = opts.filters;
+  const { cost, result } = await dfs(login, password, '/dataforseo_labs/google/ranked_keywords/live', task);
+  const items = (result?.items || []).map((i) => {
+    const kd = i.keyword_data || {};
+    const s = i.ranked_serp_element?.serp_item || {};
+    const item = {
+      keyword: kd.keyword,
+      volume: kd.keyword_info?.search_volume,
+      difficulty: kd.keyword_properties?.keyword_difficulty,
+      intent: kd.search_intent_info?.main_intent,
+      position: s.rank_group,
+      url: s.url,
+    };
+    if (!opts.detail) return item;
+    const rc = s.rank_changes || {};
+    return {
+      ...item,
+      previousPosition: rc.previous_rank_absolute ?? null,
+      change: mode === 'lost' ? 'lost' : rc.is_new ? 'new' : rc.is_up ? 'up' : rc.is_down ? 'down' : 'same',
+      volumeTrend: kd.keyword_info?.search_volume_trend || null,
+      monthlyVolume: monthly(kd.keyword_info),
+    };
   });
-  const items = (result?.items || []).map((i) => ({
-    keyword: i.keyword_data?.keyword,
-    volume: i.keyword_data?.keyword_info?.search_volume,
-    difficulty: i.keyword_data?.keyword_properties?.keyword_difficulty,
-    intent: i.keyword_data?.search_intent_info?.main_intent,
-    position: i.ranked_serp_element?.serp_item?.rank_group,
-    url: i.ranked_serp_element?.serp_item?.url,
-  }));
-  return { cost, items };
+  return { cost, totalCount: result?.total_count ?? null, metrics: result?.metrics?.organic || null, items };
+}
+
+// One normalised row for the Labs keyword endpoints (ideas and suggestions return it flat, related nests it).
+const kwRow = (k) => k && ({
+  keyword: k.keyword,
+  volume: k.keyword_info?.search_volume ?? null,
+  cpc: k.keyword_info?.cpc ?? null,
+  difficulty: k.keyword_properties?.keyword_difficulty ?? null,
+  intent: k.search_intent_info?.main_intent ?? null,
+  volumeTrend: k.keyword_info?.search_volume_trend?.yearly ?? null,
+});
+
+// Three ways to grow a seed into a cluster: Keyword Ideas (same categories), Related Keywords (Google's
+// "searches related to", depth 1 = up to 8, 2 = up to 72) and Keyword Suggestions (seed phrase + words around it).
+export async function dfsKeywordCluster(login, password, seeds, opts = {}) {
+  const loc = requireLocale(opts);
+  const limit = opts.limit ?? 50;
+  const minVolume = opts.minVolume ?? 10;
+  const order = (p) => [`${p}keyword_info.search_volume,desc`];
+  const filter = (p) => [[`${p}keyword_info.search_volume`, '>=', minVolume]];
+  const first = seeds[0];
+  const calls = [
+    ['ideas', dfs(login, password, '/dataforseo_labs/google/keyword_ideas/live', { keywords: seeds.slice(0, 200), ...loc, limit, filters: filter(''), order_by: order('') })
+      .then(({ cost, result }) => ({ cost, rows: (result?.items || []).map(kwRow) }))],
+    ['related', Promise.all(seeds.slice(0, 5).map((keyword) => dfs(login, password, '/dataforseo_labs/google/related_keywords/live', { keyword, ...loc, depth: opts.depth ?? 2, limit, filters: filter('keyword_data.'), order_by: order('keyword_data.') })))
+      .then((rs) => ({ cost: rs.reduce((s, r) => s + (r.cost || 0), 0), rows: rs.flatMap((r) => (r.result?.items || []).map((i) => kwRow(i.keyword_data))) }))],
+    ['suggestions', Promise.all(seeds.slice(0, 5).map((keyword) => dfs(login, password, '/dataforseo_labs/google/keyword_suggestions/live', { keyword, ...loc, limit, filters: filter(''), order_by: order('') })))
+      .then((rs) => ({ cost: rs.reduce((s, r) => s + (r.cost || 0), 0), rows: rs.flatMap((r) => (r.result?.items || []).map(kwRow)) }))],
+  ];
+  const settled = await Promise.allSettled(calls.map(([, p]) => p));
+  const setupError = settled.find((s) => s.status === 'rejected' && s.reason instanceof SetupError);
+  if (setupError) throw setupError.reason;
+  let cost = 0;
+  const errors = {};
+  const sources = calls.map(([name], i) => {
+    const s = settled[i];
+    if (s.status === 'rejected') { errors[name] = s.reason.message; return [name, []]; }
+    cost += s.value.cost || 0;
+    return [name, s.value.rows.filter((r) => r?.keyword)];
+  });
+  return { cost, seed: first, errors, keywords: mergeCluster(sources, { top: opts.top ?? 150 }) };
+}
+
+// Pure merge: one row per keyword (case-insensitive), with the endpoints that found it; keywords found by more
+// endpoints and with more volume come first.
+export function mergeCluster(sources, { top = 150 } = {}) {
+  const byKey = new Map();
+  for (const [source, rows] of sources) {
+    for (const r of rows) {
+      const k = r.keyword.toLowerCase().trim();
+      const cur = byKey.get(k);
+      if (cur) { if (!cur.sources.includes(source)) cur.sources.push(source); for (const f of ['volume', 'cpc', 'difficulty', 'intent', 'volumeTrend']) cur[f] ??= r[f]; }
+      else byKey.set(k, { ...r, keyword: k, sources: [source] });
+    }
+  }
+  return [...byKey.values()]
+    .sort((a, b) => (b.sources.length - a.sources.length) || ((b.volume ?? 0) - (a.volume ?? 0)))
+    .slice(0, top);
 }
 
 export async function dfsSearchVolume(login, password, keywords, opts = {}) {
   const { cost, result } = await dfs(login, password, '/dataforseo_labs/google/keyword_overview/live', {
-    keywords: keywords.slice(0, 700), ...locale(opts),
+    keywords: keywords.slice(0, 700), ...requireLocale(opts),
   });
   const items = (result?.items || []).map((i) => ({
     keyword: i.keyword,
@@ -177,7 +266,7 @@ export async function dfsSearchVolume(login, password, keywords, opts = {}) {
 
 export async function dfsSerp(login, password, keyword, opts = {}) {
   const { cost, result } = await dfs(login, password, '/serp/google/organic/live/advanced', {
-    keyword, ...locale(opts), depth: opts.depth ?? 10,
+    keyword, ...requireLocale(opts), depth: opts.depth ?? 10,
   });
   const items = (result?.items || [])
     .filter((i) => ['organic', 'featured_snippet', 'people_also_ask'].includes(i.type))
@@ -196,7 +285,7 @@ export async function dfsContentParsing(login, password, url, opts = {}) {
   return { cost, pageContent: result?.items?.[0]?.page_content || null };
 }
 
-// Backlink profile totals for a domain (or one URL). ~$0.02. Needs the Backlinks API subscription.
+// Backlink profile totals for a domain (or one URL). ~$0.024 per request, pay-as-you-go like every DataForSEO API.
 export async function dfsBacklinksSummary(login, password, target, opts = {}) {
   const { cost, result: r } = await dfs(login, password, '/backlinks/summary/live', {
     target, include_subdomains: opts.includeSubdomains ?? true, backlinks_status_type: 'live', internal_list_limit: 10,

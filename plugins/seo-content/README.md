@@ -24,6 +24,18 @@ drafts against that saved plan for free, so revisions are compared against the s
 between runs). Directory and social sites are skipped and positions 11–20 fill in for them. Inflected forms are merged by a light suffix stemmer (Polish, English,
 German), so "cateringu dietetycznego" counts as "catering dietetyczny". Cost: ~$0.004–0.02 per keyword.
 
+### Decay and clusters (DataForSEO Labs)
+- `ranking_changes` — for a domain or one page: keywords it **lost** since the last weekly check and keywords whose
+  position **dropped**, each with previous vs current position, 12-month search volume and the volume trend (so a
+  ranking loss can be told apart from falling demand), plus new/up/down/lost totals. ~$0.03–0.05 per target.
+- `keyword_cluster` — grows 1–5 seeds into a topic cluster from Keyword Ideas, Related Keywords and Keyword
+  Suggestions, merged into one list with volume, difficulty, intent and which sources found each keyword.
+  ~$0.05 per seed at the default limit.
+
+Every DataForSEO tool needs `location_code` + `language_code`, taken from `locale` in `.seo-content.json`
+(Poland 2616/`pl`, Germany 2276/`de`, UK 2826/`en`, US 2840/`en`). There is no US fallback: smaller markets have
+less long-tail data, but a German site measured against US data is simply wrong.
+
 ## Your keys stay yours
 
 Every user configures **their own** credentials; nothing is shared through the plugin or the repo.
@@ -63,7 +75,7 @@ Node ≥ 22. No npm install — the MCP server has zero dependencies.
 - Search Console only knows queries the site already appears for (last 16 months). Brand-new topics need
   `competitor_gap` (DataForSEO) or your own ideas.
 - Backlinks are totals only and on request: ask "how many backlinks does example.com have" → `backlinks_summary`
-  (DataForSEO Backlinks API — a separate subscription, ~$0.02 per check). It never runs as part of `/seo-gaps`.
+  (DataForSEO Backlinks API — pay-as-you-go like the rest, ~$0.024 per check). It never runs as part of `/seo-gaps`.
 - The term plan is a coverage checklist from word statistics, not semantic analysis: expect some generic words
   in the list, and don't write to the numbers.
 - Drafts are drafts: facts are marked `[VERIFY]` for the content team, nothing is published automatically.
@@ -72,4 +84,4 @@ Node ≥ 22. No npm install — the MCP server has zero dependencies.
 ```bash
 bash tests/run.sh
 ```
-Offline: opportunity analysis on fixture rows, term plan on fixture pages, MCP handshake, and the setup messages for missing/wrong credentials.
+Offline: opportunity analysis on fixture rows, term plan on fixture pages, DataForSEO request bodies and response mapping against a stubbed fetch, MCP handshake, the setup messages for missing/wrong credentials, and the locale guard.
