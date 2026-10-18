@@ -5,17 +5,33 @@ web development, QA and AI-assisted engineering. Each plugin is independent — 
 
 ## Install
 
+In Claude Code:
+
 ```text
 /plugin marketplace add kkuklewski/claude-plugins
 /plugin install <plugin>@kkuklewski
 ```
+
+Restart Claude Code afterwards (desktop app: quit with Cmd+Q). Plugins that need API keys explain where to get
+them and how to add them in their own README — keys are entered per user via `/plugin` → *plugin* → **Configure**
+and stay on your machine (sensitive values in the OS keychain), never in a repo.
+
+## Update
+
+```text
+/plugin marketplace update kkuklewski
+/plugin update <plugin>@kkuklewski
+```
+
+Then restart Claude Code. From a terminal: `claude plugin marketplace update kkuklewski && claude plugin update <plugin>@kkuklewski`.
+What changed: [CHANGELOG.md](CHANGELOG.md).
 
 ## Plugins
 
 | Plugin | Skill(s) | What it does |
 |---|---|---|
 | [site-audit](plugins/site-audit) | `/site-audit` | Pre-launch & regression audit of a website: SEO, Core Web Vitals, accessibility, responsiveness, semantic HTML. Audits every page type, writes a tracked was→now checklist into your repo, re-checks it later. Next.js-first, works on any URL. |
-| [seo-content](plugins/seo-content) | `/seo-gaps`, `/blog-draft` | Content opportunities from your own Google Search Console data (quick wins, cannibalisation, content gaps, decay; optional competitor gaps via pay-as-you-go DataForSEO) → briefs → review-ready blog drafts for your content team. Each user brings their own keys. |
+| [seo-content](plugins/seo-content) | `/seo-gaps`, `/blog-draft` | Content opportunities from your own Google Search Console data (quick wins, cannibalisation, content gaps, decay; optional competitor gaps, keyword clusters and ranking-loss data via pay-as-you-go DataForSEO) → briefs → review-ready blog drafts for your content team. Each user brings their own keys — [step-by-step setup](plugins/seo-content#quick-start). |
 | [motion-editor](plugins/motion-editor) | `/motion-editor` | Build a local, deterministic motion-graphics editor (timeline, keyframes, easing, presets, MP4 export via Playwright + ffmpeg) from a strict, test-verified spec. Asks for your resources and look references first and derives the editor's defaults from them. |
 | [ladder-adoption](https://github.com/kkuklewski/ladder-adoption) | `/ladder`, `/incident-response` | Find your rung on the Steps of AI Adoption and the next one up. Lives in its own repo; listed here for one-stop install. |
 
