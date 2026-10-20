@@ -1,0 +1,20 @@
+{
+  "name": "simple-brain-kit",
+  "description": "Set up a working AI second brain (simple brain) for a person or company on their own infrastructure: vault lanes, decision records with an on/off switch, nightly curation, verification and discovery playbooks, a read-only brain-mcp server with an optional append-only capture endpoint, and a staged rollout.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Kamil Kuklewski",
+    "url": "https://github.com/kkuklewski"
+  },
+  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/simple-brain-kit",
+  "repository": "https://github.com/kkuklewski/claude-plugins",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "second-brain",
+    "knowledge-base",
+    "mcp",
+    "ai-curation"
+  ]
+}

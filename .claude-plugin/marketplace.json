@@ -74,6 +74,21 @@
       "version": "0.1.2",
       "category": "productivity",
       "tags": []
+    },
+    {
+      "name": "simple-brain-kit",
+      "source": "./plugins/simple-brain-kit",
+      "description": "Set up a working AI second brain (simple brain) for a person or company on their own infrastructure: vault lanes, decision records with an on/off switch, nightly curation, verification and discovery playbooks, a read-only brain-mcp server with an optional append-only capture endpoint, and a staged rollout.",
+      "version": "0.1.0",
+      "category": "productivity",
+      "tags": [
+        "second-brain",
+        "knowledge-base",
+        "mcp",
+        "curation",
+        "obsidian",
+        "setup"
+      ]
     }
   ]
 }

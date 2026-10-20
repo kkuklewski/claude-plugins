@@ -1,0 +1,24 @@
+services:
+  brain-mcp:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      BRAIN_VAULT: /vault
+      BRAIN_INDEX_DIR: /data
+    # Same uid/gid as the vault's owner on the host, so the host sync job can commit captures.
+    user: "${BRAIN_UID}:${BRAIN_GID}"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      # The whole vault is read-only ...
+      - ${VAULT_DIR}:/vault:ro
+      # ... except the captures folder. Remove this line if you do not use the capture endpoint.
+      - ${VAULT_DIR}/inbox/captures:/vault/inbox/captures:rw
+      # Vector cache for hybrid search, outside the vault.
+      - ./data:/data:rw
+    # Bind to localhost only; publish through a reverse proxy or tunnel with HTTPS.
+    ports:
+      - "127.0.0.1:${BRAIN_PORT:-8765}:8765"

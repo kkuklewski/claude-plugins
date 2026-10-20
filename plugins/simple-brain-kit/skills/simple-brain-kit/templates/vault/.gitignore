@@ -1,0 +1,6 @@
+.DS_Store
+.obsidian/workspace*.json
+.env
+*.key
+.brain-index/
+inbox/captures/.capture.lock

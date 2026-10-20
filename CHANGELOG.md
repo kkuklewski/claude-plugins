@@ -1,5 +1,12 @@
 # Changelog
 
+## simple-brain-kit 0.1.0 — 2026-10-20
+- New plugin `/simple-brain-kit`: sets up a working simple brain for a person or company, with their consent and on their own infrastructure. It is the build step that `simple-brain-assess` recommends.
+- Vault skeleton with lanes (raw, transcripts, captures, topics, decisions, ops), `AGENTS.md`/`CLAUDE.md` with write boundaries, and five decision records that all start as `status: proposed`: AI curation with a veto, a perspective tier, verification with verbatim quotes, append-only Brain Capture, discovery.
+- Nightly playbooks with shared run rules (single context, one commit per run, never force-push, never stage dirty files, an aborting guard, query hygiene): curate and translate, verify and resolve, inspire (captured links first), and a counts-only morning summary.
+- brain-mcp template (Python, official MCP SDK): read-only tools plus an optional capture endpoint at its own secret path with an `x-api-key` key. Capture writes new files only (O_EXCL), max 4 KB and 20 per day, strips control and bidi characters, JSON-quotes frontmatter, and checks the decision's `status: active` on every request. Optional hybrid search (BM25 + vectors, RRF k=60), Docker Compose with a read-only vault mount, non-rotating secrets script, host sync script, tests.
+- Setup guide: cloud routines or cron, health checks from simple-brain-assess, gotchas, and a staged rollout from skeleton to discovery.
+
 ## simple-brain-assess 0.1.1 — 2026-10-20
 - New step 5, "Prove the work: the last 7 nights". For every scheduled job it checks whether the job ran, whether it finished (it reads the log; a green status only means the session ended), what it produced per night, whether a night only did preparation and no real output, and whether anyone saw the result. The report has a matching table, and the health model a new target: real output on at least 5 of 7 nights.
 - Lesson 16: a green run is not proof of work.
