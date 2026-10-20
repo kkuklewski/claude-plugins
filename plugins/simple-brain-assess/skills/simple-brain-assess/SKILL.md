@@ -65,6 +65,9 @@ proposes the smallest next step; the human decides.
    with the lanes from step 2. It is read-only and prints flow, structure and trust numbers.
    Add the ownership numbers from step 3 and the run evidence from step 5 by hand. Compare with the targets in
    `references/health-model.md`.
+   Also check whether health is measured on a schedule at all (a history file, a nightly job, a line
+   in the morning summary), and, if a search index sits on top of the files, whether anything compares
+   the two. No trend and no drift check are findings of their own.
 7. **Enterprise checks** (with `--enterprise`). Go through `references/enterprise-checklist.md`
    item by item. Each item gets: present / partial / missing, the evidence (file, line, setting),
    and the risk if missing. Never read or print secrets; note only that they exist and where.

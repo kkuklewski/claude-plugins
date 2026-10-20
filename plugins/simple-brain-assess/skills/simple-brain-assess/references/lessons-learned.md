@@ -72,3 +72,19 @@ Use them as checks; each one is a failure that already happened somewhere.
     tracker (Vikunja, Jira, Linear, GitHub Issues), the vector store (Supabase/pgvector or any database
     with an MCP server), notifications (Telegram, Slack, email) and web discovery. Replacing one adapter
     must not touch the vault format or the decisions.
+29. **Inventory before adding agents.** Of eight proposed nightly agents, two already existed: one
+    untested, one built but switched off. The gap was a test and a decision, not new code. Map each
+    proposal against what is deployed before building anything.
+30. **Measure every night and keep the trend.** A one-off health score is stale the next day. A
+    read-only nightly measurement, one line per day in a history file, plus one counts-only line with
+    the weekly change in the morning summary, shows direction. A missing measurement is reported too.
+31. **Health checks don't need a model.** Backlog, orphans, broken links, duplicates and index drift
+    are counts a short script gets right every time, for free. Keep the model for judgement.
+32. **Check the derived index against the files, with the indexer's own rules.** Compare per-file
+    content hashes using the indexer's scope and gate code, so the check can't disagree with it.
+    Files changed after the last index run are pending, not drift. The first run found notes that
+    were reported as indexed but had no rows in the index.
+33. **Remind the owner, don't write for them.** The priorities page is the owner's voice. The nightly
+    check flags it past 30 days; no agent edits it.
+34. **Before retiring an app, list the jobs that live inside it.** A scheduled health check ran inside
+    the web app being retired. Replace such jobs first, or they disappear without an error.

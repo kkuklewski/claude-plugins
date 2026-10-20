@@ -20,6 +20,7 @@ the size of the knowledge base, not to taste.
 | Broken internal links | 0 real ones |
 | Near-duplicate page pairs | each one reviewed (merged or cross-linked) |
 | Malformed frontmatter | 0 |
+| Index drift: files whose search-index rows differ from the file, older than the last index run | 0 |
 
 ## 3. Trustworthy — every claim is traceable
 | Metric | Target |
@@ -38,6 +39,12 @@ when a newer source on its subject exists and the page does not reflect it.
 | Review held (run logs or owner queue read) | weekly |
 | Core context pages (priorities, ownership map) updated | within 30 days |
 | Notifications that are actually opened | most of them; if not, cut them |
+
+## Measure nightly, not once
+Run the measurement every night as a read-only script with no model, append one line per day to a
+history file, and send one counts-only line with the weekly change to wherever the owner already
+looks in the morning. Keep item lists (paths, link targets) on the server, because they can name
+clients or people. A night without a measurement is itself a finding.
 
 ## Conflicts between sources
 Classify before resolving: complementary (merge), freshness (newer wins, older marked
