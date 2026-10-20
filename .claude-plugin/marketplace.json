@@ -71,7 +71,7 @@
       "name": "simple-brain-assess",
       "source": "./plugins/simple-brain-assess",
       "description": "Assess an AI second brain (personal or company knowledge base) against a proven simple-brain model: flow, structure, trust, ownership, decision bottlenecks and enterprise governance; read-only report plus the smallest next step.",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "category": "productivity",
       "tags": []
     },

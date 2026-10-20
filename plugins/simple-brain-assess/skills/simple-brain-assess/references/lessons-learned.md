@@ -52,3 +52,23 @@ Use them as checks; each one is a failure that already happened somewhere.
 22. **Measure retrieval changes on your own questions.** Hybrid search (keyword plus vector, rank fusion)
     moved top-5 hits from 8 to 9 of 10, but the first version applied folder weights twice and buried
     the labelled perspectives. Apply each weight once and keep a small eval set.
+23. **Status changes need their own capture kind.** "Mark this read" and "reject this" said by voice were
+    saved as ordinary thoughts, so the nightly run would have curated them as content. A `review` kind
+    (target plus verdict `read` or `reject`) hides the note at once and is applied by the nightly run.
+24. **To-dos need a route out of the vault.** "I need to…" captures became knowledge notes and no task
+    was ever opened. A `task` kind, turned into a tracker issue by a nightly job that writes the issue id
+    back (so a rerun never duplicates), closes the loop. Notifications carry the count, not the titles.
+25. **Provenance is part of the kind.** A voice agent saved its own web research as the owner's
+    `thought`, which gave it the highest-trust label in search. `thought` must mean the owner's words
+    only; anything the agent found or worked out is AI-written. Say so in the tool description.
+26. **Not every capture is knowledge.** A shopping list dictated in the car is a valid capture but not a
+    topic. Give captures a dismiss flag so curation skips them without deleting anything.
+27. **Know where model calls go.** A model router sent one app's prompts to providers in other
+    jurisdictions by default, and an unlabelled API key showed up under an unrelated app name. Give every
+    app its own key and title header, enforce region and zero data retention per request, and re-run a
+    live test after switching models: one candidate failed a case every time.
+28. **Keep the core small and the parts swappable.** The core is Markdown in git plus one MCP gateway with
+    a read connector and an append-only capture connector. Everything else is an adapter: the task
+    tracker (Vikunja, Jira, Linear, GitHub Issues), the vector store (Supabase/pgvector or any database
+    with an MCP server), notifications (Telegram, Slack, email) and web discovery. Replacing one adapter
+    must not touch the vault format or the decisions.
