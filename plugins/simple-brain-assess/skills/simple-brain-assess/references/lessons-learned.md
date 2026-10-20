@@ -35,3 +35,20 @@ Use them as checks; each one is a failure that already happened somewhere.
 16. **A green run is not proof of work.** A routine marked successful only ended without an
     infrastructure error. One night ran cleanly, pushed a commit, and curated nothing because
     preparation used the whole limit. Check output per night, not status.
+17. **Reading and writing are separate connectors.** Voice capture got its own endpoint with one
+    append-only tool, its own secret and key. The read connector never gains a write tool, so a
+    leaked read URL can't change anything.
+18. **A decision file can be the live switch.** The capture server reads `status:` from its decision
+    record on every call and refuses unless it says `active`. Turning a feature off is one committed
+    line, with no redeploy.
+19. **Bound the writable surface in the filesystem, not only in code.** The server's user can write one
+    capture folder and nothing else; files are create-only, size-capped and capped per day.
+20. **Connector header names are allow-listed.** claude.ai sends fixed API keys only under approved
+    header names (presets such as `x-api-key`); a custom name is rejected, and `authorization` is
+    unavailable while OAuth is selected. Accept a preset name on the server.
+21. **Re-running secret setup breaks what's connected.** A second setup run rotated the path and key,
+    and the connector added minutes earlier failed. Headers can't be edited, so the connector has to
+    be re-added. Make setup idempotent or warn before rotating.
+22. **Measure retrieval changes on your own questions.** Hybrid search (keyword plus vector, rank fusion)
+    moved top-5 hits from 8 to 9 of 10, but the first version applied folder weights twice and buried
+    the labelled perspectives. Apply each weight once and keep a small eval set.
