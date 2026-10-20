@@ -5,7 +5,7 @@
 // sensitive values in their OS keychain). Nothing here is shared between users.
 import { homedir } from 'node:os';
 import { readFile } from 'node:fs/promises';
-import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, assertDfs, requireLocale, dfsRankedKeywords, dfsKeywordCluster, dfsSearchVolume, dfsSerp, dfsContentParsing, dfsBacklinksSummary } from './lib.mjs';
+import { SetupError, loadServiceAccount, gscSites, gscQuery, ga4Report, dfsConfigured, assertDfs, requireLocale, dfsRankedKeywords, dfsKeywordCluster, labsTarget, dfsSearchVolume, dfsSerp, dfsContentParsing, dfsBacklinksSummary } from './lib.mjs';
 import { termPlan, parseMarkdown, fromContentParsing, scoreSavedPlan } from './terms.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -148,26 +148,26 @@ const TOOLS = [
   },
   {
     name: 'ranking_changes',
-    description: 'PAID (DataForSEO Labs, ~$0.03–0.05). Decay detector for a domain or one page: keywords it LOST (ranked before, gone at the last weekly check) and keywords whose position went DOWN, each with previous vs current position, 12-month search volume and volume trend — so a drop can be told apart from falling demand. Plus totals of new/up/down/lost rankings. Use for refresh planning next to gsc_opportunities.decay.',
+    description: 'PAID (DataForSEO Labs, ~$0.03–0.05). Decay detector for a domain or one page: keywords it LOST (ranked before, gone at the last weekly check) and keywords whose position went DOWN, each with previous vs current position, 12-month search volume and volume trend — so a drop can be told apart from falling demand. counts = how many lost/dropped keywords exist in total (the lists are capped by limit). Use for refresh planning next to gsc_opportunities.decay.',
     inputSchema: {
       type: 'object', required: ['target', ...LOCALE],
       properties: {
-        target: { ...str, description: 'Domain ("example.com") or one page without scheme ("example.com/blog/post"); a full URL is accepted too.' },
+        target: { ...str, description: 'Domain ("example.com") or one page ("https://example.com/blog/post"). A page without a scheme gets https:// — the API would otherwise silently report the whole domain.' },
         ...localeArgs, limit: { type: 'integer', default: 100, description: 'Rows per list (lost, down); billed per returned row' },
       },
     },
     run: async (a) => {
       const loc = locale(a);
-      const target = a.target.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+      const { kind, target } = labsTarget(a.target);
       const limit = a.limit ?? 100;
       const [lost, down] = await Promise.all([
         dfsRankedKeywords(dfsLogin(), dfsPassword(), target, { ...loc, mode: 'lost', limit, detail: true }),
         dfsRankedKeywords(dfsLogin(), dfsPassword(), target, { ...loc, limit, detail: true, filters: [['ranked_serp_element.serp_item.rank_changes.is_down', '=', true]] }),
       ]);
-      const m = down.metrics || {};
+      // Summary metrics are computed over the filtered set, so total_count of each call is the size of that list.
       return {
-        costUsd: +((lost.cost || 0) + (down.cost || 0)).toFixed(4), target, checkedAt: new Date().toISOString(),
-        totals: { new: m.is_new ?? null, up: m.is_up ?? null, down: m.is_down ?? null, lost: m.is_lost ?? null },
+        costUsd: +((lost.cost || 0) + (down.cost || 0)).toFixed(4), target, targetKind: kind, checkedAt: new Date().toISOString(),
+        counts: { lost: lost.totalCount, down: down.totalCount },
         lost: lost.items, down: down.items.map((i) => ({ ...i, drop: i.previousPosition && i.position ? i.position - i.previousPosition : null })),
       };
     },
@@ -278,7 +278,7 @@ async function handle(req) {
     return send({ id, result: {
       protocolVersion: params.protocolVersion || '2025-06-18',
       capabilities: { tools: {} },
-      serverInfo: { name: 'seo-content', version: '0.6.0' },
+      serverInfo: { name: 'seo-content', version: '0.6.1' },
     } });
   }
   if (method === 'tools/list') return send({ id, result: { tools: TOOLS.map(({ run, ...t }) => t) } });

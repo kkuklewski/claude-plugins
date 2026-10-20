@@ -78,7 +78,7 @@ console.log("PASS term plan — 14 checks");
 
 # DataForSEO helpers that need no network: cluster merge, strict locale (no silent US fallback).
 node --input-type=module -e '
-const { mergeCluster, requireLocale } = await import(process.argv[1] + "/lib.mjs");
+const { mergeCluster, requireLocale, labsTarget } = await import(process.argv[1] + "/lib.mjs");
 const fail = []; const ok = (c, m) => c || fail.push(m);
 const m = mergeCluster([
   ["ideas", [{ keyword: "Pflegedienst Kosten", volume: 900 }, { keyword: "pflegegrad 2", volume: 5000 }]],
@@ -94,8 +94,16 @@ ok(/2616/.test(threw) && /2276/.test(threw), "missing locale throws with example
 let threw2 = ""; try { requireLocale({ location_code: "2276", language_code: "de" }); } catch (e) { threw2 = e.message; }
 ok(threw2, "string location_code rejected");
 ok(requireLocale({ location_code: 2616, language_code: "pl" }).location_code === 2616, "valid locale passes");
+const t = (x) => JSON.stringify(labsTarget(x));
+ok(t("example.com/blog/post") === JSON.stringify({ kind: "page", target: "https://example.com/blog/post" }), "page without scheme gets https: " + t("example.com/blog/post"));
+ok(t("www.example.com/blog/post") === JSON.stringify({ kind: "page", target: "https://www.example.com/blog/post" }), "page keeps www");
+ok(t("http://example.com/a/") === JSON.stringify({ kind: "page", target: "http://example.com/a/" }), "explicit scheme kept");
+ok(t("https://www.example.com/") === JSON.stringify({ kind: "domain", target: "example.com" }), "root URL becomes a bare domain");
+ok(t("example.com") === JSON.stringify({ kind: "domain", target: "example.com" }), "bare domain unchanged");
+let bad = ""; try { labsTarget("not a domain"); } catch (e) { bad = e.message; }
+ok(/Invalid target/.test(bad), "spaces rejected");
 if (fail.length) { console.log("FAIL dataforseo helpers:", fail.join("; ")); process.exit(1); }
-console.log("PASS dataforseo helpers — 7 checks");
+console.log("PASS dataforseo helpers — 13 checks");
 ' "$SRV" || exit 1
 
 # Request bodies and response mapping against a stubbed fetch (fixture shapes from the DataForSEO docs).

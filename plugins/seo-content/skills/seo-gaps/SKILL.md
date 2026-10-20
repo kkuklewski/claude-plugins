@@ -69,7 +69,8 @@ voice, wordCount, cta, avoidTopics, reviewers). No repo → keep the config in t
   (~$0.01–0.05 per competitor), then `competitor_gap`. DataForSEO off → skip (preflight already said so).
 - DataForSEO on and the run includes refresh work (`decay` non-empty or `--refresh-only`) → state the cost
   (~$0.03–0.05 per target), then `ranking_changes` for the site's domain; for the top 3 decaying pages call it again
-  with the page as `target`. `lost` = keywords the page no longer ranks for; `down` rows with a falling
+  with the page's full URL (`https://…`) as `target` — the tool adds the scheme if missing, because without it the
+  API silently reports the whole domain. `counts` gives the total lost/dropped keywords (the lists are capped). `lost` = keywords the page no longer ranks for; `down` rows with a falling
   `monthlyVolume`/`volumeTrend` are lost demand, not lost rankings — say which, because only the latter needs a refresh.
 - Existing content: fetch `<siteOrigin>/sitemap.xml` (follow nested sitemaps, cap 500 URLs) to know which posts
   exist. For an opportunity that points at an existing URL, read that page's title/H1/H2s before choosing

@@ -151,7 +151,8 @@ Credentials reach only the bundled MCP server's environment — they are never p
 **Before you give it credentials, you can check what it does.** The server is two short files with no
 dependencies: [server/mcp.mjs](server/mcp.mjs) (the tools) and [server/lib.mjs](server/lib.mjs) (the HTTP calls).
 It talks to exactly three hosts — `oauth2.googleapis.com`/`www.googleapis.com` (Search Console),
-`analyticsdata.googleapis.com` (GA4) and `api.dataforseo.com` — reads only the key file you point it at, and writes
+`analyticsdata.googleapis.com` (GA4) and `api.dataforseo.com` (or `sandbox.dataforseo.com` when you run the sandbox
+test — no other host is accepted) — reads only the key file you point it at, and writes
 files only where a tool is told to (`savePlan`). Google access is read-only (`webmasters.readonly`,
 `analytics.readonly`).
 
@@ -194,5 +195,13 @@ are merged by a light suffix stemmer (Polish, English, German), so "cateringu di
 bash tests/run.sh
 ```
 Offline, no credentials: opportunity analysis on fixture rows, term plan on fixture pages, DataForSEO request bodies
-and response mapping against a stubbed fetch, MCP handshake, the setup messages for missing/wrong credentials, and
-the locale guard.
+and response mapping against a stubbed fetch, MCP handshake, the setup messages for missing/wrong credentials, the
+locale guard and page-target normalisation.
+
+Optional, free, with your own DataForSEO credentials: every request body the plugin sends, run against the
+[DataForSEO Sandbox](https://docs.dataforseo.com/v3/appendix/sandbox/) (same validation as production — required
+fields, filter paths, operators, sorting — but sample data and no charge), plus our filter paths checked against the
+free Available Filters list. Paste the API password when the cursor waits:
+```bash
+read -rs DATAFORSEO_PASSWORD && DATAFORSEO_LOGIN=you@example.com DATAFORSEO_PASSWORD="$DATAFORSEO_PASSWORD" bash tests/sandbox.sh; unset DATAFORSEO_PASSWORD
+```

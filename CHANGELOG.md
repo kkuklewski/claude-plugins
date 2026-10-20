@@ -1,5 +1,10 @@
 # Changelog
 
+## seo-content 0.6.1 — 2026-10-20
+- **Fix:** `ranking_changes` stripped `https://` from page targets, and DataForSEO silently answers a page without a scheme with data for the whole domain. Page targets now always carry the scheme (added when missing); a root URL becomes a bare domain.
+- `ranking_changes` returns `counts` (total lost/dropped keywords from `total_count`, which DataForSEO computes over the filtered set) instead of the misleading new/up totals, which were taken from the filtered call.
+- New opt-in `tests/sandbox.sh`: every request body against the free DataForSEO Sandbox (same validation as production, no charge) plus our filter paths against the Available Filters list. `DATAFORSEO_API_BASE` accepts only `api.` or `sandbox.dataforseo.com`.
+
 ## site-audit 0.2.3 — 2026-10-18
 - Works outside the desktop app: the interactive browser pass (step 2) is skipped when the built-in browser tools aren't available, and its rows are reported as manual checks instead of being improvised; `preview_start` has a terminal fallback.
 - Shorter skill description (the usage line moved into the body) so it stays well under the loader's 1024-character limit.

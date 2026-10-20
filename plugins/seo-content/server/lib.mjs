@@ -6,7 +6,14 @@ import { readFile } from 'node:fs/promises';
 
 const GSC = 'https://www.googleapis.com/webmasters/v3';
 const GA4 = 'https://analyticsdata.googleapis.com/v1beta';
-const DFS = 'https://api.dataforseo.com/v3';
+// DATAFORSEO_API_BASE switches to the free Sandbox (same request validation, sample data) for integration tests.
+// Only DataForSEO's own hosts are accepted, so credentials can never be sent anywhere else.
+const DFS = (() => {
+  const base = process.env.DATAFORSEO_API_BASE?.trim();
+  if (!base) return 'https://api.dataforseo.com/v3';
+  if (!/^https:\/\/(api|sandbox)\.dataforseo\.com\/v3$/.test(base)) throw new Error(`DATAFORSEO_API_BASE must be https://api.dataforseo.com/v3 or https://sandbox.dataforseo.com/v3, got ${base}`);
+  return base;
+})();
 const SCOPES = {
   gsc: 'https://www.googleapis.com/auth/webmasters.readonly',
   ga4: 'https://www.googleapis.com/auth/analytics.readonly',
@@ -154,6 +161,17 @@ export function requireLocale({ location_code, language_code } = {}) {
     throw new Error('location_code and language_code are required — pass `locale` from .seo-content.json (e.g. Poland 2616/"pl", Germany 2276/"de", UK 2826/"en", US 2840/"en").');
   }
   return { location_code, language_code };
+}
+
+// Labs target: a bare domain ("example.com"), or a page as an absolute URL. A page sent without the scheme is not
+// rejected by the API — it silently falls back to the whole domain (millions of rows instead of one page's), so a
+// path always gets https:// here.
+export function labsTarget(input) {
+  const raw = String(input ?? '').trim();
+  if (!raw || /\s/.test(raw)) throw new Error(`Invalid target "${raw}" — use a domain ("example.com") or a page URL ("https://example.com/blog/post").`);
+  const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+  if (url.pathname === '/' && !url.search) return { kind: 'domain', target: url.hostname.replace(/^www\./, '') };
+  return { kind: 'page', target: `${url.protocol}//${url.host}${url.pathname}${url.search}` };
 }
 
 const ym = (m) => `${m.year}-${String(m.month).padStart(2, '0')}`;
