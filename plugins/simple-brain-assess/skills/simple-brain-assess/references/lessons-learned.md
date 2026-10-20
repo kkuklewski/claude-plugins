@@ -32,3 +32,6 @@ Use them as checks; each one is a failure that already happened somewhere.
     leave the building; send counts, not titles, for client work.
 15. **A cloud run sees only the repository.** Agents, skills and connectors that live outside the
     cloned repo are silently missing in scheduled cloud runs.
+16. **A green run is not proof of work.** A routine marked successful only ended without an
+    infrastructure error. One night ran cleanly, pushed a commit, and curated nothing because
+    preparation used the whole limit. Check output per night, not status.

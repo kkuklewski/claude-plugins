@@ -1,10 +1,16 @@
 {
   "name": "simple-brain-assess",
   "description": "Assess an AI second brain (personal or company knowledge base) against a proven simple-brain model: flow, structure, trust, ownership, decision bottlenecks and enterprise governance; read-only report plus the smallest next step.",
-  "version": "0.1.0",
-  "author": { "name": "Kamil Kuklewski", "url": "https://github.com/kkuklewski" },
+  "version": "0.1.1",
+  "author": {
+    "name": "Kamil Kuklewski",
+    "url": "https://github.com/kkuklewski"
+  },
   "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/simple-brain-assess",
   "repository": "https://github.com/kkuklewski/claude-plugins",
   "license": "MIT",
-  "keywords": ["claude-code", "skills"]
+  "keywords": [
+    "claude-code",
+    "skills"
+  ]
 }

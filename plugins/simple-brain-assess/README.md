@@ -5,7 +5,7 @@ brain" model. Raw captures flow in, AI curates them every night within written b
 evidence, unverified material is kept as labelled perspectives, and the owner keeps a veto instead
 of approving every item.
 
-It finds where people are the bottleneck: approval gates with growing queues, digests nobody reads,
+It proves whether the automations did their work over the last 7 nights: did each job run, did it finish, what it produced, and did anyone see it. It finds where people are the bottleneck: approval gates with growing queues, digests nobody reads,
 review piles. It measures health in four areas: flow, structure, trust and ownership. With
 `--enterprise` it also checks governance for a company of roughly 50 to 500 people: named owners,
 risk-tiered review, permission-aware retrieval, personal data and client data, and transparency.

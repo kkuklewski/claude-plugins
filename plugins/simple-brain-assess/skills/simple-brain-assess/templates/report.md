@@ -9,6 +9,10 @@
 ## Decision flow and bottleneck
 <who or what moves items between lanes; manual vs automatic; queue sizes and ages; approvals per month>
 
+## Evidence of work, last 7 nights
+| Job | Nights ran | Finished cleanly | Output (per night) | Silent failures / stalled nights | Result seen by anyone? |
+|---|---|---|---|---|---|
+
 ## Health vs targets
 | Property | Metric | Now | Target |
 |---|---|---|---|

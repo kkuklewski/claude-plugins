@@ -12,7 +12,7 @@
     {
       "name": "site-audit",
       "source": "./plugins/site-audit",
-      "description": "Pre-launch and regression audit of a website: SEO, Core Web Vitals, accessibility, responsiveness, semantic HTML. Audits every page type, writes a tracked was→now checklist and re-checks it later.",
+      "description": "Pre-launch and regression audit of a website: SEO, Core Web Vitals, accessibility, responsiveness, semantic HTML. Audits every page type, writes a tracked was\u2192now checklist and re-checks it later.",
       "version": "0.2.3",
       "category": "development",
       "tags": [
@@ -32,19 +32,20 @@
         "source": "github",
         "repo": "kkuklewski/ladder-adoption"
       },
-      "description": "Find your rung on the Steps of AI Adoption and the next one up; incident-response loop to earn the next rung.",
+      "description": "DEPRECATED, use simple-brain-assess. Find your rung on the Steps of AI Adoption and the next one up; incident-response loop to earn the next rung.",
       "category": "productivity",
       "tags": [
         "adoption",
         "maturity",
         "assessment",
-        "incident-response"
+        "incident-response",
+        "deprecated"
       ]
     },
     {
       "name": "seo-content",
       "source": "./plugins/seo-content",
-      "description": "Turn Google Search Console data into content opportunities and review-ready blog drafts — quick wins, cannibalisation, decaying pages, optional competitor gaps — without a Semrush/Ahrefs subscription. Every user brings their own keys.",
+      "description": "Turn Google Search Console data into content opportunities and review-ready blog drafts \u2014 quick wins, cannibalisation, decaying pages, optional competitor gaps \u2014 without a Semrush/Ahrefs subscription. Every user brings their own keys.",
       "version": "0.6.1",
       "category": "development",
       "tags": [
@@ -61,7 +62,7 @@
     {
       "name": "motion-editor",
       "source": "./plugins/motion-editor",
-      "description": "Build a local, deterministic motion-graphics editor app (Vite + React + Canvas renderFrame, Playwright + ffmpeg MP4 export) from a strict spec — asks for your resources and look-reference examples first.",
+      "description": "Build a local, deterministic motion-graphics editor app (Vite + React + Canvas renderFrame, Playwright + ffmpeg MP4 export) from a strict spec \u2014 asks for your resources and look-reference examples first.",
       "version": "0.1.0",
       "category": "productivity",
       "tags": []
@@ -70,7 +71,7 @@
       "name": "simple-brain-assess",
       "source": "./plugins/simple-brain-assess",
       "description": "Assess an AI second brain (personal or company knowledge base) against a proven simple-brain model: flow, structure, trust, ownership, decision bottlenecks and enterprise governance; read-only report plus the smallest next step.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "category": "productivity",
       "tags": []
     }

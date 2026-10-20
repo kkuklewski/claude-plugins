@@ -46,23 +46,38 @@ proposes the smallest next step; the human decides.
    (`claude` → `/schedule list`; do not create or change any), n8n/Zapier/Make mentions in the
    repo, CI workflows. For each: what it reads, what it writes, what it sends to people, and
    whether anyone reads that output (emails nobody opens are a finding).
-5. **Measure health.** Run `python3 -I "$SKILL_DIR/scripts/measure.py" <path> [--raw <dir>] [--wiki <dir>]`
+5. **Prove the work: the last 7 nights.** An automation that exists is not one that works. For
+   every scheduled job found in step 4, collect evidence from the last 7 days, read-only:
+   - **Did it run?** Routine run history (`/schedule` → ask for recent runs, or the routines page),
+     `journalctl --user -u <unit> --since -7d`, cron log lines, CI run history, n8n executions.
+   - **Did it finish?** Exit status, the final result line it prints, failed units
+     (`systemctl --user --failed`). A green run status only means the session ended; read the log.
+   - **Did it produce something?** Commits by the bot or job in the knowledge base
+     (`git log --since=7.days --format='%ad %an %s' --date=short`), run logs it writes, items it
+     moved (curated, verified, alerts sent), counts per night.
+   - **Did it do the useful part?** Distinguish preparation from output: a night that only scored or
+     fetched and curated nothing is a stalled night, not a successful one.
+   - **Did anyone see the result?** Summary or alert delivered, digest opened, queue shrinking.
+   Build a 7-row table per job (night → ran / finished / output count / notes) and name every
+   silent failure, stalled night and run that nobody reads.
+
+6. **Measure health.** Run `python3 -I "$SKILL_DIR/scripts/measure.py" <path> [--raw <dir>] [--wiki <dir>]`
    with the lanes from step 2. It is read-only and prints flow, structure and trust numbers.
-   Add the ownership numbers from step 3 by hand. Compare with the targets in
+   Add the ownership numbers from step 3 and the run evidence from step 5 by hand. Compare with the targets in
    `references/health-model.md`.
-6. **Enterprise checks** (with `--enterprise`). Go through `references/enterprise-checklist.md`
+7. **Enterprise checks** (with `--enterprise`). Go through `references/enterprise-checklist.md`
    item by item. Each item gets: present / partial / missing, the evidence (file, line, setting),
    and the risk if missing. Never read or print secrets; note only that they exist and where.
    Never copy personal data or customer data into the report: count it, point to the path.
-7. **Score maturity.** Place each lane on the 0–5 scale in `references/maturity-model.md`, with one
+8. **Score maturity.** Place each lane on the 0–5 scale in `references/maturity-model.md`, with one
    line of evidence each. The overall level is the lowest lane that blocks the flow.
-8. **Write the report** from `templates/report.md`, in the user's language. Lead with the verdict in
-   two sentences. Then: the map, the decision flow with its bottleneck, health numbers vs targets,
+9. **Write the report** from `templates/report.md`, in the user's language. Lead with the verdict in
+   two sentences. Then: the map, the decision flow with its bottleneck, the 7-night work evidence, health numbers vs targets,
    enterprise findings, maturity per lane, and **one smallest next step** with its expected effect,
    what it needs (people, access, approvals) and how to roll it back. Save it as
    `simple-brain-assessment-<YYYY-MM-DD>.md` in the current directory, not inside the knowledge
    base, unless the user says otherwise.
-9. **With `--plan`:** add the staged rollout for the next 3 levels, each stage with an entry
+10. **With `--plan`:** add the staged rollout for the next 3 levels, each stage with an entry
    criterion, the metric that proves it worked, and who must approve it. In a company, map every
    stage to an owner role and keep the approval gate for high-risk content (see the checklist).
 

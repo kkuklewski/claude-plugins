@@ -1,5 +1,12 @@
 # Changelog
 
+## simple-brain-assess 0.1.1 — 2026-10-20
+- New step 5, "Prove the work: the last 7 nights". For every scheduled job it checks whether the job ran, whether it finished (it reads the log; a green status only means the session ended), what it produced per night, whether a night only did preparation and no real output, and whether anyone saw the result. The report has a matching table, and the health model a new target: real output on at least 5 of 7 nights.
+- Lesson 16: a green run is not proof of work.
+
+## ladder-adoption — deprecated 2026-10-20
+- Marked deprecated in this catalog in favour of `simple-brain-assess`. It stays listed, so existing installs keep working, and gets no new features. Its repository is unchanged.
+
 ## simple-brain-assess 0.1.0 — 2026-10-20
 - New plugin `/simple-brain-assess`: read-only assessment of an AI second brain, personal or company-wide, against a working simple-brain model, where AI curates within written bounds, claims carry evidence and the owner keeps a veto instead of approving every item.
 - It maps the lanes and the decision flow and names the human bottleneck, such as approval gates with growing queues or digests nobody reads. It measures health in four areas (flow, structure, trust, ownership) with a bundled read-only `measure.py`, scores each lane on a 0–5 maturity scale, and proposes one smallest next step, or a staged rollout with `--plan`.

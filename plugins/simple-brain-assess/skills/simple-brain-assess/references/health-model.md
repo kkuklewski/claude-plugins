@@ -11,6 +11,7 @@ the size of the knowledge base, not to taste.
 | Age of the oldest eligible raw item | ≤ 7 days |
 | Items waiting for a human decision | trending down; none older than 14 days |
 | Scheduled runs that completed last week | ≥ 6 of 7 |
+| Nights that produced real output (not only preparation) | ≥ 5 of 7 |
 
 ## 2. Connected — a graph, not a pile
 | Metric | Target |
