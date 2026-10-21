@@ -48,8 +48,13 @@ plugins/<name>/
   README.md
 templates/plugin-skeleton/        starting point for a new plugin
 scripts/new-plugin.sh <name>      scaffold a plugin from the skeleton and register it in the catalog
-scripts/validate.sh               validate the catalog, every plugin, and run plugin tests
+scripts/validate.sh               validate the catalog, every plugin, run plugin tests and the leak scan
+scripts/leak-scan.py              fail on secrets, real IPs, home paths, e-mails or infra IDs anywhere in the repo
 ```
+
+The leak scan also reads a private denylist that is never committed (`~/.config/claude-plugins/leak-denylist.txt`,
+or `LEAK_DENYLIST`): one case-insensitive regex per line for names that are private by themselves, such as
+clients, your own hosts and account IDs. A line that must keep a match ends with `leak-scan: allow`.
 
 ## Adding a plugin
 

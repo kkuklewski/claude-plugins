@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Validate the marketplace catalog, every local plugin, catalog↔manifest version agreement,
-# portable skill paths, and run each plugin's tests/run.sh if present.
+# portable skill paths, run each plugin's tests/run.sh if present, and scan the whole repo for leaks.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"; FAIL=0
 claude plugin validate . >/dev/null 2>&1 && echo "✔ marketplace.json" || { echo "✘ marketplace.json"; claude plugin validate .; FAIL=1; }
@@ -15,4 +15,6 @@ if(e.version&&e.version!==p.version){console.log("✘ "+n+" version mismatch: ca
   if grep -rnE '(bash|node|cat|source) +~/.claude/skills|/Users/' "$P/skills" >/dev/null 2>&1; then echo "✘ $N: hard-coded local paths:"; grep -rnE '(bash|node|cat|source) +~/.claude/skills|/Users/' "$P/skills" | head -5; FAIL=1; fi
   if [ -f "$P/tests/run.sh" ]; then bash "$P/tests/run.sh" | sed "s/^/  $N tests: /" || FAIL=1; fi
 done
+# Repo-wide leak scan: secrets, real IPs, home paths, e-mails, infra IDs, plus the private local denylist.
+python3 -I scripts/leak-scan.py || FAIL=1
 [ $FAIL = 0 ] && echo "all good" || { echo "validation failed"; exit 1; }
