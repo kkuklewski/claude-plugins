@@ -91,6 +91,17 @@ class TestServer(unittest.TestCase):
         self.assertIn("saved: inbox/captures/", str(res))
         set_status(self.root, "proposed")
 
+    def test_review_hides_note_from_recent(self):
+        set_status(self.root, "active")
+        res = self.call(CAPTURE_PATH + "/mcp", CAPTURE_KEY, "capture",
+                        {"kind": "review", "target": "topics/pricing.md", "verdict": "read"})
+        self.assertIn("saved: inbox/captures/", str(res))
+        self.server.brain.refresh(force=True)
+        res = str(self.call("/mcp", READ_KEY, "recent", {"days": 3650}))
+        self.assertNotIn("topics/pricing.md", res)
+        self.assertIn("topics/pricing.md", str(self.call("/mcp", READ_KEY, "recent", {"days": 3650, "include_read": True})))
+        set_status(self.root, "proposed")
+
 
 if __name__ == "__main__":
     unittest.main()

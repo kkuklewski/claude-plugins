@@ -8,6 +8,12 @@ A small MCP server over a Markdown brain vault, in two parts on one process:
 | Capture (optional) | `<BRAIN_CAPTURE_PATH>/mcp`, a secret random path | `capture` | new files in `inbox/captures/` only |
 
 Both check an API key in the `x-api-key` header, each with its own key. `/healthz` answers `ok`.
+This is the kit's core gateway; the vector store is an adapter (see "Search").
+
+Every result carries **flags** so the reader can weigh it: `ai_written`, `capture`, `read` (the
+owner marked it read), `vetoed` (rejected), `review` and `task` (bookkeeping), `dismissed` (kept,
+not knowledge). A `review` capture counts at once, before the nightly run applies it: the latest
+review of a note wins. `recent` hides read notes and review captures unless `include_read=true`.
 
 ## Files
 
@@ -32,6 +38,9 @@ Both check an API key in the `x-api-key` header, each with its own key. `/health
   self-hosted model (for example Ollama with `nomic-embed-text`), not a third-party API.
 - Check it on your own questions before relying on it: 10–20 real questions with the page that
   should answer each, top-5 hits for keyword vs hybrid.
+- **External store** (optional, `BRAIN_VECTOR_URL`, wins over `BRAIN_EMBED_URL`): any database
+  behind one HTTP endpoint, `POST {"query","limit"}` → `{"results":[{"path"}]}`, fused the same way.
+  Supabase/pgvector example in the kit's `references/architecture.md`.
 - The index refreshes when files change (checked at most every 30 s). Fine for a few thousand
   notes; beyond that, move the vectors into a real vector store, still on top of the Markdown.
 
@@ -44,9 +53,22 @@ Both check an API key in the `x-api-key` header, each with its own key. `/health
 - Control characters and bidi/invisible characters (U+202A–202E, U+2066–2069, zero-width, …)
   are stripped. Every frontmatter value is JSON-quoted, so a title like `x"\n---\nstatus: active`
   cannot inject fields.
-- Kinds: `thought` (`written_by: "human"`), `link` (http/https URL required), `talk_summary`
-  (`written_by: "ai"`). Every capture is `trust: "unverified"`, so curation treats it as a
-  perspective until evidence promotes it.
+- Kinds and provenance:
+
+  | Kind | Fields | `written_by` |
+  |---|---|---|
+  | `thought` | `text`: the owner's own words only | `human` |
+  | `link` | `url` (http/https), `text`: why | `human` |
+  | `talk_summary` | `text`: anything the agent wrote, found, checked or worked out; body starts with an AI-written banner | `ai` |
+  | `review` | `target` (an existing note in `topics/`, `raw/`, `transcripts/`, `inbox/`, `ops/runs/`; reject only in `topics/`, `raw/`, `inbox/`), `verdict` `read` or `reject`, optional reason | `human` |
+  | `task` | `text`: title line (max 150 characters) plus optional details, 1000 characters in all | `human` |
+
+  The tool description tells the agent the provenance rule in so many words: a `thought` is never
+  the agent's own research, a verdict is never a `thought`, a to-do is never a `thought`.
+- `dismiss_reason` (optional, any kind) marks a capture that is not knowledge (a shopping list):
+  `rag_dismissed: true` plus the reason. It is kept, flagged `dismissed`, never curated or tasked.
+- Every capture is `trust: "unverified"`, so curation treats it as a perspective until evidence
+  promotes it.
 
 ## Deploy
 

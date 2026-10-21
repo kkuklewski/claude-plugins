@@ -1,0 +1,10 @@
+[Unit]
+Description=Brain health: after the index job, before the morning summary
+
+[Timer]
+# Example schedule (UTC): index 03:15, tasks 04:50, health 05:05, morning summary 06:30.
+OnCalendar=*-*-* 05:05:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

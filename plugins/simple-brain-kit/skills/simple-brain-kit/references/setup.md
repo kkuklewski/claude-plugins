@@ -1,4 +1,4 @@
-# Setup: scheduling, morning summary, health checks, gotchas
+# Setup: scheduling, host jobs, morning summary, model-call privacy, health checks, gotchas
 
 ## Scheduling the nightly runs
 
@@ -11,9 +11,14 @@ dumb. Suggested order, an hour apart so commits never race:
 | 01:00 | discovery | `inspire.md` | 0005 |
 | 02:00 | curation | `curate.md` | 0001 (+ 0002) |
 | 03:00 | verification | `verify-and-resolve.md` | 0003 |
-| 06:30 | morning summary | `morning-summary.md` | — |
+| 03:15 | index (if you run an external vector store) | your indexer | — |
+| 04:50 | tasks from captures (host job) | `brain-jobs/capture_tasks.py` | 0004 + a tracker adapter |
+| 05:05 | health measurement (host job, read-only) | `brain-jobs/brain_health.py` | — |
+| 06:30 | morning summary | `morning-summary.md` or `brain-jobs/morning_summary.py` | — |
 
-Discovery runs first so its finds are curated the same night.
+Discovery runs first so its finds are curated the same night. The task job runs on the vault host
+after `sync.sh` has pulled the night's commits; it commits only the captures it updated, and the
+next sync pushes them.
 
 ### Option A: Claude Code cloud routines
 
@@ -41,14 +46,48 @@ Discovery runs first so its finds are curated the same night.
 
 ## Morning summary: counts only
 
-`ops/playbooks/morning-summary.md` sends one message per morning with counts per job, captures
-yesterday and open owner-queue items, plus a line only for `failed`, `stalled` or `missing` runs.
-No titles, no names, no content: a notification ends up on lock screens and in other people's
-inboxes. If nobody reads it for two weeks, turn it off instead of adding more.
+One message per morning with counts per job, captures in the last 24 hours, tasks created and
+waiting, reviews waiting and open owner-queue items, plus a line only for `failed`, `stalled` or
+`missing` runs. `brain-jobs/morning_summary.py` builds it in code and sends it through the
+notification adapter (Telegram, Slack, email); `ops/playbooks/morning-summary.md` is the same as a
+routine. No titles, no names, no content, not even task titles: a notification ends up on lock
+screens and in other people's inboxes, and bot chats are not end-to-end encrypted. If nobody reads
+it for two weeks, turn it off instead of adding more.
+
+## Model-call privacy
+
+Every app that calls a model (the nightly runs, a voice agent, the embedding indexer, a chat bot)
+sends vault content somewhere. Decide where, per app, and check it.
+
+- **One API key and one title per app.** Each app gets its own key, and with a router its own app
+  name (OpenRouter: `HTTP-Referer` plus `X-OpenRouter-Title`, formerly `X-Title`; add
+  `X-OpenRouter-App-Visibility: hidden` for internal apps). Then usage, cost and a leaked key can be
+  traced to one app and revoked alone. An unlabelled key shows up under someone else's app name.
+- **Enforce region and retention per request, not by account default.** With a router that
+  forwards to many providers, set it on every request: OpenRouter `provider: {"zdr": true,
+  "data_collection": "deny"}` (zero data retention, no training), and the EU endpoint
+  (`https://eu.openrouter.ai/api/v1`) when data must stay in the EU. Defaults change and a
+  fallback provider can sit in another jurisdiction.
+- **Embeddings are model calls too.** Every chunk of the vault goes to the embedding endpoint;
+  prefer a self-hosted model when the vault holds client or personal data.
+- **Re-run a live test after any model switch.** A short fixed set of real tasks (one capture of
+  each kind, one curation, one search question) with expected outcomes. A new model can pass a demo
+  and fail the same case every time; check before it runs a night unattended.
+- Write the per-app choices (provider, region, retention, key name, last live test) into the vault's
+  `SETUP-NOTES.md`, without the keys.
 
 ## Health checks (from simple-brain-assess)
 
-After the first 7 nights, run `/simple-brain-assess <vault> --plan`, or check by hand:
+**Measure every night, keep the trend.** `brain-jobs/brain_health.py` runs after the index job and
+before the morning summary: read-only, no model, one JSON line per day in a history file, item lists
+in a report on the host, and one counts-only line with the weekly change in the morning summary.
+It also checks the index against the files with the indexer's own rules (files changed after the
+last index run are pending, not drift) and reminds the owner when the priorities page is older than
+30 days, without ever writing it. A morning with "no measurement today" is a finding in itself.
+Before adding new nightly agents, list what already runs: often the gap is a test or a switched-off
+job, not new code. [29–33]
+
+After the first 7 nights, also run `/simple-brain-assess <vault> --plan`, or check by hand:
 
 | Area | Check | Target |
 |---|---|---|
@@ -58,10 +97,12 @@ After the first 7 nights, run `/simple-brain-assess <vault> --plan`, or check by
 | Flow | Nights with real output, not only preparation | ≥ 5 of 7 |
 | Structure | Topic pages with no inbound link (index excluded) | 0 |
 | Structure | Broken internal links, malformed frontmatter | 0 |
+| Structure | Index drift: files whose index rows differ from the file, older than the last index run | 0 |
 | Trust | AI-written pages without a source | 0 |
 | Trust | Open `[!question]`/`[!warning]` older than 14 days | 0 |
 | Ownership | Run logs or owner queue read | weekly |
 | Ownership | Owner queue open items | ≤ 10 |
+| Ownership | Priorities page updated (by the owner) | within 30 days |
 
 **Prove the work, not the status.** For each job, build a 7-row table: night → ran / finished /
 output count / note. A routine marked green only means the session ended. One clean night with a
@@ -70,12 +111,25 @@ commit and zero curated items is a stalled night.
 ## Gotchas
 
 The background for most of these is in simple-brain-assess's `references/lessons-learned.md`
-(lessons 4–8, 14–22); the lesson numbers are given in brackets.
+(lessons 4–8, 14–34); the lesson numbers are given in brackets.
 
 - **Re-running secret setup rotates the secrets**, and that breaks a connector that is already
   added: its URL (capture path) and key no longer match, and a connector's headers cannot be
   edited, so it has to be removed and re-added. `setup_secrets.sh` keeps existing secrets unless
   you pass `--rotate`. [21]
+- **Status changes and to-dos need their own capture kinds.** "Mark this read" saved as a thought
+  gets curated as content; "I need to…" saved as a thought never becomes a task. Use `review` and
+  `task`, and keep the tool description explicit about it. [23, 24]
+- **Provenance is part of the kind.** A voice agent that saves its own research as the owner's
+  `thought` gives it the highest-trust label. `thought` is the owner's words only; everything the
+  agent found or worked out is `talk_summary`. [25]
+- **Not every capture is knowledge.** Dismiss a shopping list (`rag_dismissed`, `dismiss_reason`)
+  instead of deleting it or curating it. [26]
+- **Know where model calls go.** See "Model-call privacy" above. [27]
+- **Jobs live somewhere.** Before retiring a machine or an app, list the scheduled jobs inside it
+  (health check, task job, sync) and move them first, or they stop without an error. The morning
+  summary's "no measurement today" and `missing` lines are how you notice. [34]
+- **Keep the core small.** Swap adapters, never the vault format or the decisions, to fit a tool. [28]
 - **Reading and writing are separate connectors.** Never add a write tool to the read endpoint;
   a leaked read URL must not be able to change anything. [17]
 - **The decision file is the live switch.** The capture endpoint reads `status:` on every call, so

@@ -12,7 +12,7 @@ depends_on: decisions/0002-perspective-tier.md
 ## Context
 
 The best thoughts come away from the desk. A capture connector lets an AI app save a thought, a
-link or a talk summary into the brain by voice, without giving that app any way to read, change or
+link, a talk summary, a verdict on a note or a to-do into the brain by voice, without giving that app any way to read, change or
 delete what is already there.
 
 ## Decision
@@ -26,13 +26,53 @@ Bounds, enforced in code, not by the prompt:
 - At most 4 KB per capture and 20 captures per day.
 - Control characters and bidirectional-text characters are stripped; frontmatter values are
   JSON-quoted, so a capture cannot inject frontmatter fields or break the file.
-- Kinds: `thought` (the owner's own words), `link` (a URL plus a note), `talk_summary`
-  (a summary the AI wrote of a conversation, marked `written_by: ai`).
 - The endpoint lives at its own secret path and needs an API key in the `x-api-key` header. It is
   separate from the read-only endpoint.
 
-Curation treats every capture as a **perspective** (decision 0002) until evidence promotes it.
-Discovery (ops/playbooks/inspire.md) processes captured links first.
+### Kinds and provenance
+
+| Kind | What | `written_by` | Nightly handling |
+|---|---|---|---|
+| `thought` | The owner's own words, verbatim, lightly cleaned. **Only** the owner's words. | `human` | curate (as a perspective) |
+| `link` | An http(s) URL plus one line on why | `human` | inspire, captured links first |
+| `talk_summary` | Anything the AI wrote, found, checked, researched or worked out, including a summary of a conversation. Starts with an "AI-written" banner. | `ai` | curate (as a perspective, never as the owner's view) |
+| `review` | The owner marks an existing note read or rejects it: `target` (a vault path, checked to exist) and `verdict` (`read` or `reject`), optional reason | `human` | curate step 1b, before the veto check |
+| `task` | A to-do the owner asked for: first line = title (max 150 characters), optional details, 1000 characters in all | `human` | `capture_tasks.py` creates one tracker task and writes `tracker_task` back |
+
+**Provenance rule:** if the agent found, checked or worked it out, it is a `talk_summary`, even when
+the owner says "save that". A `thought` carries the highest trust label in search; the agent's own
+research must never borrow it. Verdicts ("mark it read", "skip that one") are `review`, never a
+`thought`, and to-dos are `task`, never a `thought`.
+
+### Reviews
+
+- Reviewable: `topics/`, `raw/`, `transcripts/`, `inbox/`, `ops/runs/`. Rejectable only where a veto
+  means something: `topics/`, `raw/`, `inbox/`.
+- The read connector flags the target at once (`read`, plus `vetoed` for a reject) and hides it from
+  "what's new" unless asked with `include_read`. The latest review of a note wins.
+- The nightly curation applies reviews (ops/playbooks/curate.md, step 1b): `owner_read` on the
+  target; for a reject, the veto fields on raw items, or `rag_dismissed` on captures. The review
+  capture stays as the record.
+- Any per-item cards or reminders (a chat bot asking "keep or veto?") skip notes with `owner_read`.
+
+### Tasks
+
+- A host job (`brain-jobs/capture_tasks.py`) turns each task capture into a task in the owner's
+  tracker (Vikunja, Jira, Linear, GitHub Issues: an adapter picked at setup) and writes
+  `tracker_task` and `processed_at` back, so a rerun never duplicates.
+- Veto model: tasks are created without asking; the owner deletes unwanted ones. The job never
+  edits or deletes a tracker task.
+- The morning summary reports how many tasks were created and how many wait, never their titles.
+
+### Not knowledge: the dismiss flag
+
+Some captures are valid but are not knowledge: a shopping list, a private errand. They get
+`rag_dismissed: true` and a `dismiss_reason` (set by the agent at capture time when the owner says
+so, or by curation later). They are kept, never deleted, but never curated, indexed as knowledge or
+turned into tasks.
+
+Curation treats every `thought` and `talk_summary` as a **perspective** (decision 0002) until
+evidence promotes it.
 
 ## Rollback
 

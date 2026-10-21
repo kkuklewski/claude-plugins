@@ -9,7 +9,7 @@ First read `ops/playbooks/_run-rules.md` and follow it.
 ## Steps
 
 1. **Pick pages.** Topic pages with `verification: none` first, then `partial`, then pages with an
-   open `> [!question]`, oldest `updated` first. Skip `veto:`. Up to the verification cap.
+   open `> [!question]`, oldest `updated` first. Skip `veto:` and `status: withdrawn`. Up to the verification cap.
 2. **Pick claims.** Per page, the 3–5 key claims a reader would act on. Not every sentence.
 3. **Fetch the source verbatim.** Use a fetch that returns the page text, not a model summary. If
    the only tool available summarises, every verdict from it is `unverifiable: summary-only`.

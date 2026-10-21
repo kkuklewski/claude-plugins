@@ -11,7 +11,7 @@ unless the owner says so in the conversation.
 | 2 | Curation with veto | Dry run approved | 0001 `active`; nightly curate; backlog shrinks; vetoes per week < 10% of items | Owner (company: content owner) | 0001 `paused`, `git revert` |
 | 3 | Perspectives and verification | 7 nights of stage 2 with ≥ 5 productive | 0002 and 0003 `active`; verified share rising; owner queue ≤ 10 | Owner | 0003 `paused` |
 | 4 | Read access from Claude | Stage 2 stable | brain-mcp read endpoint live; connector added; owner answers a real question from the brain | Owner (company: IT/security) | Remove connector, stop container |
-| 5 | Capture | Stage 4 live; 0002 active | 0004 `active`; captures arrive and are curated as perspectives within a night | Owner | 0004 `paused` (instant) |
+| 5 | Capture | Stage 4 live; 0002 active | 0004 `active`; captures arrive and are curated as perspectives within a night; reviews hide notes at once and are applied overnight; with a tracker adapter, task captures become tasks once (no duplicates on rerun) | Owner | 0004 `paused` (within one sync); stop the task timer |
 | 6 | Discovery and morning summary | Stages 2–3 stable | 0005 `active`; captured links processed first; summary read most mornings | Owner | 0005 `paused`; stop the summary |
 
 ## In a company

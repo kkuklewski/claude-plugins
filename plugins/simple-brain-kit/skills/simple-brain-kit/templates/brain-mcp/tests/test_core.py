@@ -11,8 +11,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from brain_core import (CAPTURE_DECISION, CAPTURE_MAX_PER_DAY, RRF_K, Brain, CaptureRefused,  # noqa: E402
-                        Vault, VaultError, capture_status, clean_text, parse_frontmatter, rrf,
-                        tokenize, write_capture)
+                        RemoteVectorStore, Vault, VaultError, capture_status, clean_text,
+                        parse_frontmatter, rrf, tokenize, write_capture)
 
 NOW = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
 
@@ -212,6 +212,105 @@ class TestCapture(Base):
             self.cap(text="one too many")
         nxt = datetime(2026, 1, 3, tzinfo=timezone.utc)
         self.cap(text="next day", now=nxt)
+
+
+class TestReviewTaskProvenance(Base):
+    def setUp(self):
+        super().setUp()
+        set_status(self.root, "active")
+
+    def cap(self, **kw):
+        args = dict(kind="thought", text="", now=NOW, vault=self.vault)
+        args.update(kw)
+        return write_capture(self.root, **args)
+
+    def fm(self, rel):
+        return parse_frontmatter((self.root / rel).read_text())
+
+    def test_review_records_target_and_verdict(self):
+        rel = self.cap(kind="review", target="topics/pricing.md", verdict="Read", text="done")
+        fm = self.fm(rel)
+        self.assertEqual((fm["kind"], fm["target"], fm["verdict"], fm["written_by"]),
+                         ("review", "topics/pricing.md", "read", "human"))
+        self.assertEqual(fm["title"], "Read: Pricing models")
+        self.assertIn("[[topics/pricing]]", (self.root / rel).read_text())
+
+    def test_review_refusals(self):
+        bad = [dict(target="topics/missing.md", verdict="read"),          # must exist
+               dict(target="../x.md", verdict="read"),                    # inside the vault
+               dict(target="private/secret-plan.md", verdict="read"),     # not an excluded folder
+               dict(target="topics/pricing.md", verdict="maybe"),         # verdict read|reject
+               dict(target="ops/runs/2026-01-01-curate.md", verdict="reject"),  # reject only where a veto means something
+               dict(target=CAPTURE_DECISION, verdict="read")]             # not a reviewable lane
+        for kw in bad:
+            with self.subTest(**kw), self.assertRaises(CaptureRefused):
+                self.cap(kind="review", **kw)
+        self.cap(kind="review", target="ops/runs/2026-01-01-curate.md", verdict="read")
+
+    def test_read_connector_flags_reviews_at_once(self):
+        b = Brain(self.vault)
+        self.assertNotIn("read", {f for r in b.topics() for f in r["flags"]})
+        self.cap(kind="review", target="topics/pricing.md", verdict="read")
+        self.cap(kind="review", target="raw/2026-01-01-note.md", verdict="reject",
+                 now=datetime(2026, 1, 2, 4, tzinfo=timezone.utc))
+        b.refresh(force=True)
+        flags = {r["path"]: r["flags"] for r in b.recent(days=3650, include_read=True)}
+        self.assertIn("read", flags["topics/pricing.md"])
+        self.assertNotIn("vetoed", flags["topics/pricing.md"])
+        self.assertEqual({"read", "vetoed"} & set(flags["raw/2026-01-01-note.md"]), {"read", "vetoed"})
+        hidden = [r["path"] for r in b.recent(days=3650)]
+        self.assertNotIn("topics/pricing.md", hidden)
+        self.assertFalse(any(p.startswith("inbox/captures/") for p in hidden))  # review captures hidden too
+        self.assertIn("topics/index.md", hidden)
+
+    def test_latest_review_wins_and_owner_read_counts(self):
+        self.cap(kind="review", target="raw/2026-01-01-note.md", verdict="reject")
+        self.cap(kind="review", target="raw/2026-01-01-note.md", verdict="read",
+                 now=datetime(2026, 1, 3, tzinfo=timezone.utc))
+        p = self.root / "topics/index.md"
+        p.write_text("---\ntitle: \"Index\"\nowner_read: 2026-01-01\n---\n")
+        b = Brain(self.vault)
+        flags = {r["path"]: r["flags"] for r in b.recent(days=3650, include_read=True)}
+        self.assertNotIn("vetoed", flags["raw/2026-01-01-note.md"])
+        self.assertIn("read", flags["topics/index.md"])
+
+    def test_task_limits_and_title(self):
+        rel = self.cap(kind="task", text="Renew the domain\nbefore the end of the month")
+        fm = self.fm(rel)
+        self.assertEqual((fm["kind"], fm["title"], fm["written_by"]), ("task", "Renew the domain", "human"))
+        self.assertIn("-task-", rel)
+        for text in ("x" * 151, "ok\n" + "y" * 1000, ""):
+            with self.subTest(n=len(text)), self.assertRaises(CaptureRefused):
+                self.cap(kind="task", text=text)
+
+    def test_provenance_flag(self):
+        thought = self.fm(self.cap(kind="thought", text="My own idea."))
+        summary_rel = self.cap(kind="talk_summary", text="I checked three sources and found X.")
+        self.assertEqual(thought["written_by"], "human")
+        self.assertEqual(self.fm(summary_rel)["written_by"], "ai")
+        self.assertIn("AI-written summary", (self.root / summary_rel).read_text())
+        flags = {r["path"]: r["flags"] for r in Brain(self.vault).search("checked sources")["results"]}
+        self.assertIn("ai_written", flags[summary_rel])
+
+    def test_dismiss_flag(self):
+        rel = self.cap(kind="talk_summary", text="Buy screws and two planks", dismiss_reason="shopping list\n")
+        text = (self.root / rel).read_text()
+        self.assertIn("\nrag_dismissed: true\n", text)
+        self.assertEqual(self.fm(rel)["dismiss_reason"], "shopping list")
+        self.assertIn("dismissed", Brain(self.vault).search("planks")["results"][0]["flags"])
+
+
+class TestRemoteVectorStore(Base):
+    def test_store_adapter_is_fused(self):
+        class FakeStore(RemoteVectorStore):
+            def __init__(self):
+                pass
+
+            def rank(self, query, limit=50):
+                return ["raw/2026-01-01-note.md"]
+        out = Brain(self.vault, store=FakeStore()).search("welcome staff")
+        self.assertEqual(out["mode"], "hybrid")
+        self.assertEqual(out["results"][0]["path"], "raw/2026-01-01-note.md")
 
 
 if __name__ == "__main__":

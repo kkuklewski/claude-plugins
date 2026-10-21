@@ -8,7 +8,8 @@ First read `ops/playbooks/_run-rules.md` and follow it.
 
 ## Steps
 
-1. **Captured links first.** Every capture with `kind: "link"` and no `status: curated`, oldest
+1. **Captured links first.** Every capture with `kind: "link"`, no `status: curated` and no
+   `rag_dismissed: true`, oldest
    first. Fetch the URL verbatim. Save a source note `raw/<date>-<slug>.md` with frontmatter
    `type: source`, `source_url`, `captured_from: "inbox/captures/<file>"`, `written_by: ai`, a short
    neutral summary and 1–3 verbatim quotes. Then set `status: curated` and `curated_in:` on the
@@ -23,6 +24,9 @@ First read `ops/playbooks/_run-rules.md` and follow it.
 4. **Finish** as in `_run-rules.md`.
 
 Discovery never writes to `topics/` directly. Everything it finds goes through curation.
+
+Discovery tool: whichever adapter AGENTS.md names (plain fetch, Apify, a search connector). The
+playbook is the same for each; only the tool call changes.
 
 ## Query hygiene
 

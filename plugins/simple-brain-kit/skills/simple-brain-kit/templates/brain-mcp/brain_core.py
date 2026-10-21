@@ -25,7 +25,13 @@ CAPTURE_MAX_BYTES = 4096
 CAPTURE_MAX_PER_DAY = 20
 CAPTURE_DIR = "inbox/captures"
 CAPTURE_DECISION = "decisions/0004-brain-capture.md"
-CAPTURE_KINDS = ("thought", "link", "talk_summary")
+CAPTURE_KINDS = ("thought", "link", "talk_summary", "review", "task")
+REVIEW_VERDICTS = ("read", "reject")
+# A review may point at any curated or raw lane; reject only where a veto means something.
+REVIEW_LANES = ("topics/", "raw/", "transcripts/", "inbox/", "ops/runs/")
+REJECT_LANES = ("topics/", "raw/", "inbox/")
+TASK_TITLE_MAX = 150
+TASK_MAX_CHARS = 1000
 
 # --------------------------------------------------------------------------- vault access
 
@@ -164,6 +170,52 @@ class Doc:
     text: str
     mtime: float
     tokens: list[str]
+    fm: dict = field(default_factory=dict)
+    review: list[str] = field(default_factory=list)  # from owner reviews not yet applied by the nightly run
+
+    @property
+    def flags(self) -> list[str]:
+        flags = doc_flags(self.rel, self.fm)
+        return flags + [f for f in self.review if f not in flags]
+
+
+def _truthy(v: str) -> bool:
+    return str(v).strip().lower() in ("true", "yes", "1")
+
+
+def doc_flags(rel: str, fm: dict) -> list[str]:
+    """Labels a reader needs to weigh a note: who wrote it and what the owner decided about it."""
+    flags = []
+    if fm.get("written_by") == "ai":
+        flags.append("ai_written")
+    if rel.startswith(CAPTURE_DIR + "/"):
+        flags.append("capture")
+        if fm.get("kind") == "review":
+            flags.append("review")
+        elif fm.get("kind") == "task":
+            flags.append("task")
+    if fm.get("owner_read"):
+        flags.append("read")
+    if fm.get("veto"):
+        flags.append("vetoed")
+    if _truthy(fm.get("rag_dismissed", "")):
+        flags.append("dismissed")
+    return flags
+
+
+def apply_reviews(docs: list[Doc]) -> None:
+    """Owner reviews count at once, before the nightly run applies them: the latest review of a
+    note wins; read -> "read", reject -> "read" + "vetoed"."""
+    latest: dict[str, tuple[str, str]] = {}
+    for d in docs:
+        if d.rel.startswith(CAPTURE_DIR + "/") and d.fm.get("kind") == "review":
+            target, verdict = d.fm.get("target", ""), d.fm.get("verdict", "")
+            at = d.fm.get("captured_at", "")
+            if target and verdict in REVIEW_VERDICTS and at >= latest.get(target, ("", ""))[0]:
+                latest[target] = (at, verdict)
+    for d in docs:
+        verdict = latest.get(d.rel, ("", ""))[1]
+        d.review = ["read", "vetoed"] if verdict == "reject" else ["read"] if verdict == "read" else []
 
 
 class KeywordIndex:
@@ -234,6 +286,27 @@ def chunks(text: str, size: int = 1500) -> list[str]:
     return out or [""]
 
 
+def chunk_hash(chunk: str) -> str:
+    import hashlib
+    return hashlib.sha256(chunk.encode()).hexdigest()
+
+
+def doc_chunks(title: str, text: str) -> list[tuple[int, str, str]]:
+    """The indexer's chunking rule: (chunk_index, chunk text, content hash). One definition, used by
+    the vector index and by the nightly health check, so the two can never disagree."""
+    return [(i, c, chunk_hash(c)) for i, c in enumerate(chunks(f"{title}\n{text}"))]
+
+
+def corpus(vault: "Vault") -> list[dict]:
+    """What the index should contain: every file in scope (Vault.files: Markdown, no hidden or
+    excluded folders, no symlinks out) as {path, chunk_index, content_hash}."""
+    out = []
+    for rel, p in vault.files():
+        text = p.read_bytes()[:MAX_READ_BYTES].decode("utf-8", errors="replace")
+        out += [{"path": rel, "chunk_index": i, "content_hash": h} for i, _, h in doc_chunks(title_of(rel, text), text)]
+    return out
+
+
 class VectorIndex:
     """Chunk vectors cached by content hash in a JSON file outside the vault."""
 
@@ -247,17 +320,11 @@ class VectorIndex:
                 self.cache = {}
         self.chunks: list[tuple[str, list[float]]] = []
 
-    @staticmethod
-    def _key(s: str) -> str:
-        import hashlib
-        return hashlib.sha256(s.encode()).hexdigest()
-
     def build(self, docs: list[Doc]) -> None:
         pending = []
         pairs = []
         for d in docs:
-            for c in chunks(f"{d.title}\n{d.text}"):
-                k = self._key(c)
+            for _, c, k in doc_chunks(d.title, d.text):
                 pairs.append((d.rel, k))
                 if k not in self.cache:
                     pending.append((k, c))
@@ -286,17 +353,40 @@ class VectorIndex:
         return [rel for rel, _ in sorted(best.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]]
 
 
+class RemoteVectorStore:
+    """Vector store adapter for an external database (Supabase/pgvector, Qdrant, ...) behind one HTTP
+    endpoint you control. Contract: POST {"query": str, "limit": int} -> {"results": [{"path": str}]},
+    best first. Indexing happens on the database side (see references/architecture.md)."""
+
+    def __init__(self, url: str, api_key: str = "", timeout: float = 20.0):
+        self.url, self.api_key, self.timeout = url, api_key, timeout
+
+    def build(self, docs: list[Doc]) -> None:  # the database keeps its own index
+        return None
+
+    def rank(self, query: str, limit: int = 50) -> list[str]:
+        body = json.dumps({"query": query, "limit": limit}).encode()
+        req = urllib.request.Request(self.url, data=body, headers={"Content-Type": "application/json"})
+        if self.api_key:
+            req.add_header("Authorization", f"Bearer {self.api_key}")
+        with urllib.request.urlopen(req, timeout=self.timeout) as r:  # noqa: S310 (URL is operator config)
+            rows = json.load(r).get("results", [])
+        return [str(row["path"]) for row in rows if row.get("path")][:limit]
+
+
 class Brain:
     """Read-only view of a vault with keyword or hybrid (keyword + vector, RRF) search."""
 
     def __init__(self, vault: Vault, embed: Embedder | None = None, cache_file: Path | None = None,
-                 ttl: float = 30.0):
-        self.vault, self.embed, self.cache_file, self.ttl = vault, embed, cache_file, ttl
+                 ttl: float = 30.0, store: "RemoteVectorStore | None" = None):
+        """embed: local vectors (cached in cache_file). store: an external vector store adapter.
+        Pass one or neither; without both, search is keyword only."""
+        self.vault, self.embed, self.cache_file, self.ttl, self.store = vault, embed, cache_file, ttl, store
         self._sig: tuple | None = None
         self._checked = 0.0
         self.docs: list[Doc] = []
         self.keyword = KeywordIndex([])
-        self.vector: VectorIndex | None = None
+        self.vector: VectorIndex | RemoteVectorStore | None = None
         self.vector_error = ""
 
     def _signature(self) -> tuple:
@@ -315,10 +405,14 @@ class Brain:
         for rel, p in self.vault.files():
             text = p.read_bytes()[:MAX_READ_BYTES].decode("utf-8", errors="replace")
             title = title_of(rel, text)
-            docs.append(Doc(rel, title, text, p.stat().st_mtime, tokenize(title) * 3 + tokenize(text)))
+            docs.append(Doc(rel, title, text, p.stat().st_mtime, tokenize(title) * 3 + tokenize(text),
+                            parse_frontmatter(text)))
+        apply_reviews(docs)
         self.docs, self._sig = docs, sig
         self.keyword = KeywordIndex(docs)
-        if self.embed:
+        if self.store is not None:
+            self.vector = self.store
+        elif self.embed:
             try:
                 v = VectorIndex(self.embed, self.cache_file)
                 v.build(docs)
@@ -348,17 +442,22 @@ class Brain:
             d = self._doc(rel)
             if d:
                 results.append({"path": rel, "title": d.title, "score": round(score, 5),
-                                "snippet": snippet(d.text, query)})
+                                "flags": d.flags, "snippet": snippet(d.text, query)})
         out = {"mode": mode, "results": results}
         if self.vector_error:
             out["vector_error"] = self.vector_error
         return out
 
-    def recent(self, days: int = 7, limit: int = 20) -> list[dict]:
+    def recent(self, days: int = 7, limit: int = 20, include_read: bool = False) -> list[dict]:
+        """Recently changed files. Notes the owner marked read or rejected, and the review captures
+        themselves, are left out unless include_read is set."""
         self.refresh()
         cutoff = time.time() - max(1, int(days)) * 86400
-        docs = sorted((d for d in self.docs if d.mtime >= cutoff), key=lambda d: (-d.mtime, d.rel))
-        return [{"path": d.rel, "title": d.title,
+        docs = [d for d in self.docs if d.mtime >= cutoff]
+        if not include_read:
+            docs = [d for d in docs if not {"read", "review"} & set(d.flags)]
+        docs.sort(key=lambda d: (-d.mtime, d.rel))
+        return [{"path": d.rel, "title": d.title, "flags": d.flags,
                  "modified": datetime.fromtimestamp(d.mtime, timezone.utc).strftime("%Y-%m-%d %H:%M")}
                 for d in docs[: max(1, min(int(limit), 100))]]
 
@@ -369,7 +468,7 @@ class Brain:
             if d.rel.startswith("topics/"):
                 fm = parse_frontmatter(d.text)
                 out.append({"path": d.rel, "title": d.title, "updated": fm.get("updated", ""),
-                            "verification": fm.get("verification", "")})
+                            "verification": fm.get("verification", ""), "flags": d.flags})
         return out
 
     def overview(self) -> dict:
@@ -467,9 +566,34 @@ def _slug(s: str, n: int = 40) -> str:
     return s[:n].strip("-") or "capture"
 
 
-def write_capture(vault_root: Path, kind: str, text: str, title: str = "", url: str = "",
-                  now: datetime | None = None, rand: Callable[[], str] | None = None) -> str:
-    """Write one capture as a new file. Returns the vault-relative path, or raises CaptureRefused."""
+def _review_target(vault: Vault, target: str, verdict: str) -> tuple[str, str, str]:
+    verdict = clean_text(verdict, multiline=False).lower()
+    if verdict not in REVIEW_VERDICTS:
+        raise CaptureRefused(f"a review needs verdict {' or '.join(REVIEW_VERDICTS)}")
+    try:
+        p = vault.resolve(clean_text(target, multiline=False))
+    except VaultError as e:
+        raise CaptureRefused(f"a review needs the path of an existing note ({e})") from None
+    rel = p.relative_to(vault.root).as_posix()
+    if not rel.startswith(REVIEW_LANES):
+        raise CaptureRefused("only notes in topics/, raw/, transcripts/, inbox/ and ops/runs/ can be reviewed")
+    if verdict == "reject" and not rel.startswith(REJECT_LANES):
+        raise CaptureRefused("only topics/, raw/ and inbox/ notes can be rejected; mark it read instead")
+    text = p.read_bytes()[:20000].decode("utf-8", errors="replace")
+    return rel, verdict, clean_text(title_of(rel, text), multiline=False)[:80]
+
+
+def write_capture(vault_root: Path, kind: str, text: str = "", title: str = "", url: str = "",
+                  target: str = "", verdict: str = "", dismiss_reason: str = "",
+                  vault: Vault | None = None, now: datetime | None = None,
+                  rand: Callable[[], str] | None = None) -> str:
+    """Write one capture as a new file. Returns the vault-relative path, or raises CaptureRefused.
+
+    Provenance is part of the kind: thought, link, review and task carry the owner's own words or
+    decisions (written_by: human); anything the agent found, checked or worked out is a talk_summary
+    (written_by: ai). dismiss_reason marks a capture that is not knowledge (a shopping list): it is
+    kept, but curation and search treat it as dismissed.
+    """
     root = Path(vault_root)
     status = capture_status(root)
     if status != "active":
@@ -479,13 +603,32 @@ def write_capture(vault_root: Path, kind: str, text: str, title: str = "", url: 
     body = clean_text(text, multiline=True)
     title = clean_text(title, multiline=False)[:120]
     url = clean_text(url, multiline=False)
-    if not body and not url:
+    dismiss_reason = clean_text(dismiss_reason, multiline=False)[:200]
+    extra: dict[str, str] = {}
+
+    if kind == "review":
+        rel, verdict, target_title = _review_target(vault or Vault(root), target, verdict)
+        if len(body) > 500:
+            raise CaptureRefused("keep the reason of a review under 500 characters")
+        title = f"{'Read' if verdict == 'read' else 'Rejected'}: {target_title}"
+        body = f"Owner marked [[{rel[:-3]}]] as **{verdict}**." + (f"\n\nReason: {body}" if body else "")
+        extra = {"target": rel, "verdict": verdict}
+        url = ""
+    elif not body and not url:
         raise CaptureRefused("empty capture")
-    if kind == "link":
+    elif kind == "link":
         if not url or len(url) > 2048 or not _URL_RE.match(url):
             raise CaptureRefused("a link capture needs an http(s) url")
     elif url and not _URL_RE.match(url):
         raise CaptureRefused("url must be http(s)")
+    if kind == "task":
+        first = body.split("\n", 1)[0].strip()
+        if not first or len(first) > TASK_TITLE_MAX or len(body) > TASK_MAX_CHARS:
+            raise CaptureRefused(f"a task is one title line (max {TASK_TITLE_MAX} characters) plus optional "
+                                 f"detail lines, {TASK_MAX_CHARS} characters in all")
+        title = first
+    if kind == "talk_summary":
+        body = "> AI-written summary, not the owner's words.\n\n" + body
 
     now = now or datetime.now(timezone.utc)
     rand = rand or (lambda: secrets.token_hex(3))
@@ -498,10 +641,14 @@ def write_capture(vault_root: Path, kind: str, text: str, title: str = "", url: 
         "source": "brain-capture",
         "trust": "unverified",
         "status": "raw",
+        **extra,
     }
     if url:
         fm["url"] = url
-    head = "\n".join(f"{k}: {json.dumps(v, ensure_ascii=False)}" for k, v in fm.items())
+    lines = [f"{k}: {json.dumps(v, ensure_ascii=False)}" for k, v in fm.items()]
+    if dismiss_reason:
+        lines += ["rag_dismissed: true", f"dismiss_reason: {json.dumps(dismiss_reason, ensure_ascii=False)}"]
+    head = "\n".join(lines)
     content = f"---\n{head}\n---\n\n{body}\n".encode("utf-8")
     if len(content) > CAPTURE_MAX_BYTES:
         raise CaptureRefused(f"capture is {len(content)} bytes; the limit is {CAPTURE_MAX_BYTES}. Shorten it.")

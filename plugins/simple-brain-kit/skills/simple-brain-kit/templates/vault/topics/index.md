@@ -8,4 +8,6 @@ written_by: human
 
 Entry point to the curated topics. Nightly curation adds a link here for every new topic page.
 
+- [[priorities]]: the owner's current priorities (written by the owner only)
+
 ## Topics

@@ -1,0 +1,9 @@
+[Unit]
+Description=Nightly brain health measurement, kept as a trend (read-only, no model)
+
+[Service]
+Type=oneshot
+# Same settings file as the other brain jobs; the index adapter's key must be select-only.
+EnvironmentFile=%h/.config/brain-jobs/env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 %h/brain-jobs/brain_health.py

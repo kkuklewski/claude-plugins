@@ -5,6 +5,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 SKILL="$HERE/../skills/simple-brain-kit"
 VAULT="$SKILL/templates/vault"
 MCP="$SKILL/templates/brain-mcp"
+JOBS="$SKILL/templates/brain-jobs"
 fail=0
 ok(){ echo "ok   $1"; }
 bad(){ echo "FAIL $1"; fail=1; }
@@ -30,6 +31,16 @@ LEAKS=$(grep -rnIE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b|/Users/|/home/[a-z]|[A-Za-z0
 # 4. brain-mcp unit tests (standard library; server tests skip without mcp/httpx).
 OUT=$(cd "$MCP" && python3 -I -B -m unittest discover -s tests 2>&1); RC=$?
 [ $RC = 0 ] && ok "brain-mcp tests: $(echo "$OUT" | grep -E '^(OK|Ran)' | tr '\n' ' ')" || { bad "brain-mcp tests"; echo "$OUT" | tail -20; }
+
+# 4b. brain-jobs unit tests (tasks to a tracker, morning summary).
+OUT=$(cd "$JOBS" && python3 -I -B -m unittest discover -s tests 2>&1); RC=$?
+[ $RC = 0 ] && ok "brain-jobs tests: $(echo "$OUT" | grep -E '^(OK|Ran)' | tr '\n' ' ')" || { bad "brain-jobs tests"; echo "$OUT" | tail -20; }
+
+# 4c. The architecture is documented where an agent starts, and the provenance rule is in the tool.
+grep -q '^## How the pieces fit' "$SKILL/SKILL.md" && grep -q 'CORE: Markdown vault in git' "$SKILL/SKILL.md" \
+  && grep -q '^## How the pieces fit' "$HERE/../README.md" && ok "architecture section + diagram" || bad "architecture section missing"
+grep -q 'thought ONLY for the owner' "$MCP/server.py" && grep -q 'kind=talk_summary' "$MCP/server.py" \
+  && ok "provenance rule in the capture tool" || bad "provenance rule missing from the capture tool"
 
 # 5. setup_secrets.sh keeps secrets on re-run and rotates only with --rotate.
 T=$(mktemp -d); cp "$MCP/env.example" "$MCP/setup_secrets.sh" "$T/"
