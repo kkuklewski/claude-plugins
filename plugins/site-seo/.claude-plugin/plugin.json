@@ -1,12 +1,12 @@
 {
-  "name": "seo-content",
+  "name": "site-seo",
   "description": "Turn Google Search Console data into content opportunities and review-ready blog drafts — quick wins, cannibalisation, decaying pages, optional competitor gaps — without a Semrush/Ahrefs subscription. Every user brings their own keys.",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "author": {
     "name": "Kamil Kuklewski",
     "url": "https://github.com/kkuklewski"
   },
-  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/seo-content",
+  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/site-seo",
   "repository": "https://github.com/kkuklewski/claude-plugins",
   "license": "MIT",
   "keywords": [

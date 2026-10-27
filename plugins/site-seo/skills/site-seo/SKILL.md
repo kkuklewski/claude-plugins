@@ -1,16 +1,16 @@
 ---
-name: seo-gaps
-description: Find content opportunities from a site's own Google Search Console data — striking-distance queries (pos 4.5–20), weak snippets, cannibalisation, content gaps (impressions but no page in the top 20), decaying pages — optionally add competitor gaps and search volume (DataForSEO), then write one content brief per opportunity for /blog-draft. Each user brings their own Google key; nothing is shared. Use when the user says "what should we write about", "SEO content gaps", "blog ideas from Search Console", "why is traffic dropping", "which pages to refresh", "set up seo-content", or invokes /seo-gaps. Usage: /seo-gaps [--setup] [--days 90] [--competitors a.com,b.com] [--briefs N] [--refresh-only]
+name: site-seo
+description: Find content opportunities from a site's own Google Search Console data — striking-distance queries (pos 4.5–20), weak snippets, cannibalisation, content gaps (impressions but no page in the top 20), decaying pages — optionally add competitor gaps and search volume (DataForSEO), then write one content brief per opportunity for /site-blog. Each user brings their own Google key; nothing is shared. Use when the user says "what should we write about", "SEO content gaps", "blog ideas from Search Console", "why is traffic dropping", "which pages to refresh", "set up site-seo", or invokes /site-seo. Usage: /site-seo [--setup] [--days 90] [--competitors a.com,b.com] [--briefs N] [--refresh-only]
 ---
 
 # SEO gaps → content briefs
 
-Data comes from the plugin's **seo-content MCP server** (tools `setup_check`, `gsc_opportunities`, `gsc_query`,
+Data comes from the plugin's **site-seo MCP server** (tools `setup_check`, `gsc_opportunities`, `gsc_query`,
 `ga4_landing_pages`, `competitor_gap`, `keyword_volume`, `serp_snapshot`, `term_plan`, `ranking_changes`, `keyword_cluster`). Credentials never leave the user's machine:
 - **Google key — per client:** `googleKeyFile` in the repo's `.seo-content.json` is a *path* to that client's
   service-account JSON (e.g. `~/.config/<client>/sa.json`). Pass it as `keyFile` to **every** Google tool call
   (`setup_check`, `gsc_*`, `ga4_*`, `competitor_gap`). No `googleKeyFile` → the tools fall back to the optional
-  default key from `/plugin configure seo-content@kkuklewski`.
+  default key from `/plugin configure site-seo@kkuklewski`.
 - **DataForSEO (optional):** login/password in the plugin settings, password in the OS keychain. Every DataForSEO
   tool needs `location_code` + `language_code` — always pass them from `locale` in `.seo-content.json`; the tools
   refuse to guess (no US default).
@@ -37,8 +37,8 @@ voice, wordCount, cta, avoidTopics, reviewers). No repo → keep the config in t
 
 ### 0. Preflight — every run (the whole run for `--setup`)
 1. Read `.seo-content.json`. Missing → step 0.3.
-2. Call `setup_check` with `siteUrl`, `ga4PropertyId` and `keyFile` (= `googleKeyFile`) from config. The seo-content tools aren't available at
-   all → the plugin's MCP server didn't start: tell the user to run `/plugin configure seo-content@kkuklewski`,
+2. Call `setup_check` with `siteUrl`, `ga4PropertyId` and `keyFile` (= `googleKeyFile`) from config. The site-seo tools aren't available at
+   all → the plugin's MCP server didn't start: tell the user to run `/plugin configure site-seo@kkuklewski`,
    then restart Claude Code. Otherwise act on each source:
    - `google: missing` → first look for an existing key for this client: list `~/.config/<client>/*.json` and
      `~/.config/seo-content/*.json` (file names only — never print contents). A candidate found → confirm with the
@@ -92,7 +92,7 @@ in `blog.avoidTopics`. With `--refresh-only`, skip New post rows. Rank by potent
 
 ### 3. Write the report and briefs
 Into `<outputDir>/` (create it):
-- `seo-gaps-YYYY-MM-DD.md` — headline numbers, one table per action type (query / page / impressions / position /
+- `site-seo-YYYY-MM-DD.md` — headline numbers, one table per action type (query / page / impressions / position /
   why / action), then which data sources were used and which were off.
 - `briefs/<slug>.md` — for the top `--briefs N` New post / new section items, from
   [../../templates/brief.md](../../templates/brief.md). DataForSEO on → `term_plan` for the primary keyword
@@ -105,7 +105,7 @@ Into `<outputDir>/` (create it):
   landing pages for a how-to), note the intent mismatch and consider a closer keyword. Off → write
   `not checked — DataForSEO off` in both sections and build the outline from the site's own query cluster.
 
-End with the next command: `/blog-draft <outputDir>/briefs/<slug>.md`.
+End with the next command: `/site-blog <outputDir>/briefs/<slug>.md`.
 
 ## Rules
 - Every number comes from tool output — never invent volumes, positions or traffic. The CTR curve only ranks

@@ -1,11 +1,11 @@
 ---
-name: blog-draft
-description: Turn a content brief from /seo-gaps into a review-ready blog post draft in the site's language and voice — outline-true, internally linked, with title/meta variants, an FAQ where it fits and a reviewer checklist that marks every claim the content team must verify. Produces a DRAFT for humans to correct, never a published post. Use when the user says "draft the blog post", "write the article from this brief", "turn the brief into a post", or invokes /blog-draft. Usage: /blog-draft <brief.md | topic> [--format md|mdx] [--out <path>]
+name: site-blog
+description: Turn a content brief from /site-seo into a review-ready blog post draft in the site's language and voice — outline-true, internally linked, with title/meta variants, an FAQ where it fits and a reviewer checklist that marks every claim the content team must verify. Produces a DRAFT for humans to correct, never a published post. Use when the user says "draft the blog post", "write the article from this brief", "turn the brief into a post", or invokes /site-blog. Usage: /site-blog <brief.md | topic> [--format md|mdx] [--out <path>]
 ---
 
 # Blog draft from a brief
 
-Input is normally a brief written by `/seo-gaps` (`<outputDir>/briefs/<slug>.md`). A bare topic works too:
+Input is normally a brief written by `/site-seo` (`<outputDir>/briefs/<slug>.md`). A bare topic works too:
 then write a short brief first (same template: [../../templates/brief.md](../../templates/brief.md)), show it,
 and only draft after the user agrees.
 

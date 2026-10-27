@@ -1,19 +1,24 @@
-# seo-content
+# site-seo
 
 Turn a site's own Google Search Console data into content opportunities and review-ready blog drafts —
 without a Semrush/Ahrefs subscription. Search Console + GA4 are free; competitor gaps, search volume, keyword
 clusters, decay data and SERP snapshots are optional via pay-as-you-go [DataForSEO](https://dataforseo.com)
 (typically a few $/month).
 
+> **Renamed from `seo-content` (0.7.0):** `/seo-gaps` is now `/site-seo`, `/blog-draft` is now `/site-blog`.
+> Your `.seo-content.json` files and keys under `~/.config/seo-content/` keep working unchanged. Switching:
+> `/plugin install site-seo@kkuklewski`, `/plugin uninstall seo-content@kkuklewski`, re-enter the optional
+> DataForSEO login via `/plugin configure site-seo@kkuklewski`, restart Claude Code.
+
 ```text
-/seo-gaps [--setup] [--days 90] [--competitors a.com,b.com] [--briefs N] [--refresh-only]
-/blog-draft <brief.md | topic> [--format md|mdx] [--out <path>]
+/site-seo [--setup] [--days 90] [--competitors a.com,b.com] [--briefs N] [--refresh-only]
+/site-blog <brief.md | topic> [--format md|mdx] [--out <path>]
 ```
 
 | Skill | Does |
 |---|---|
-| `/seo-gaps` | Finds striking-distance queries (pos 4.5–20), weak snippets, cannibalisation, content gaps (impressions but no page in the top 20, questions first), decaying pages; optional competitor gaps. Writes a dated report + one brief per new-post opportunity. |
-| `/blog-draft` | Brief → draft in the site's language, voice and frontmatter shape, with title/meta variants, `[VERIFY]` markers on every claim to check, and a reviewer checklist for the content team. Scores the draft against the term plan. Never publishes. |
+| `/site-seo` | Finds striking-distance queries (pos 4.5–20), weak snippets, cannibalisation, content gaps (impressions but no page in the top 20, questions first), decaying pages; optional competitor gaps. Writes a dated report + one brief per new-post opportunity. |
+| `/site-blog` | Brief → draft in the site's language, voice and frontmatter shape, with title/meta variants, `[VERIFY]` markers on every claim to check, and a reviewer checklist for the content team. Scores the draft against the term plan. Never publishes. |
 
 ## Quick start
 
@@ -22,7 +27,7 @@ clusters, decay data and SERP snapshots are optional via pay-as-you-go [DataForS
 | 1 | [Install the plugin](#1-install) | 1 min | yes |
 | 2 | [Create a Google key for the site](#2-google-key-free) | 5–10 min | yes |
 | 3 | [Add your DataForSEO API key](#3-dataforseo-api-key-optional-paid) | 5 min | optional |
-| 4 | [Run `/seo-gaps --setup` in the site's repo](#4-first-run) | 2 min | yes |
+| 4 | [Run `/site-seo --setup` in the site's repo](#4-first-run) | 2 min | yes |
 
 Without step 3 everything based on Search Console and GA4 works; only the paid extras are off.
 
@@ -35,7 +40,7 @@ In Claude Code:
 
 ```text
 /plugin marketplace add kkuklewski/claude-plugins
-/plugin install seo-content@kkuklewski
+/plugin install site-seo@kkuklewski
 ```
 
 Then restart Claude Code (on the desktop app: fully quit with Cmd+Q, closing the window is not enough).
@@ -57,7 +62,7 @@ One service-account key per client. Already have one for that client (e.g. for G
    Add that email as a user in **Search Console → Settings → Users and permissions** (Restricted is enough) and,
    for GA4, in **Admin → Property access management** (Viewer).
 
-You don't paste the key anywhere: `/seo-gaps --setup` finds it under `~/.config/` and stores only its **path** in
+You don't paste the key anywhere: `/site-seo --setup` finds it under `~/.config/` and stores only its **path** in
 the repo's `.seo-content.json`.
 
 ### 3. DataForSEO API key (optional, paid)
@@ -72,13 +77,13 @@ Enables `competitor_gap`, `keyword_volume`, `keyword_cluster`, `ranking_changes`
    - **API login** — your account e-mail;
    - **API password** — the generated one shown on that page. **Not** the password you log in to the website with.
 3. Save them in the plugin — pick one:
-   - **In Claude Code (easiest):** run `/plugin`, open **seo-content → Configure**, fill in *DataForSEO API login*
+   - **In Claude Code (easiest):** run `/plugin`, open **site-seo → Configure**, fill in *DataForSEO API login*
      and *DataForSEO API password*.
    - **In a terminal:** paste the API password when the cursor waits (nothing is shown), then press Enter:
      ```bash
-     read -rs DFS_PW && printf '{"dataforseo_login":"you@example.com","dataforseo_password":"%s"}' "$DFS_PW" | claude plugin configure seo-content@kkuklewski --values-stdin; unset DFS_PW
+     read -rs DFS_PW && printf '{"dataforseo_login":"you@example.com","dataforseo_password":"%s"}' "$DFS_PW" | claude plugin configure site-seo@kkuklewski --values-stdin; unset DFS_PW
      ```
-     Replace `you@example.com` with your API login. `claude plugin configure seo-content@kkuklewski` shows which
+     Replace `you@example.com` with your API login. `claude plugin configure site-seo@kkuklewski` shows which
      options are set.
 4. Restart Claude Code. The plugin reads its settings once, at start.
 
@@ -89,33 +94,33 @@ The password is marked sensitive, so it goes to your OS keychain, not into a fil
 Open Claude Code in the client's repo (or any folder for that site) and run:
 
 ```text
-/seo-gaps --setup
+/site-seo --setup
 ```
 
 It finds the Google key, checks Search Console, GA4 and DataForSEO, tells you exactly what's missing, asks a few
 questions (property, brand terms, blog language and voice) and writes `.seo-content.json`. Commit that file —
-it holds IDs and settings, **no secrets**, so the whole team shares it. Then run `/seo-gaps`.
+it holds IDs and settings, **no secrets**, so the whole team shares it. Then run `/site-seo`.
 
 ## Updating
 
 ```text
 /plugin marketplace update kkuklewski
-/plugin update seo-content@kkuklewski
+/plugin update site-seo@kkuklewski
 ```
 
-Restart Claude Code afterwards. From a terminal: `claude plugin marketplace update kkuklewski && claude plugin update seo-content@kkuklewski`.
+Restart Claude Code afterwards. From a terminal: `claude plugin marketplace update kkuklewski && claude plugin update site-seo@kkuklewski`.
 What changed is in the [changelog](../../CHANGELOG.md).
 
 ## Troubleshooting
 
 | Message | Fix |
 |---|---|
-| The seo-content tools don't exist in Claude Code | Plugin not loaded: check `/plugin` shows it enabled, then fully restart Claude Code. |
+| The site-seo tools don't exist in Claude Code | Plugin not loaded: check `/plugin` shows it enabled, then fully restart Claude Code. |
 | `google: missing` … not a service-account key | You downloaded an OAuth client file. Create a key under **Service accounts → Keys** (step 2). |
 | `searchConsole: missing` … has no access | Add the key's `client_email` as a user on that Search Console property. |
 | … is not enabled in your Google Cloud project | Enable that API in the same Cloud project as the key, wait a minute, retry. |
 | Google rejected the service-account key | The key was deleted or disabled — create a new key for the same service account. |
-| `No Google service-account key configured` | Run `/seo-gaps --setup` (it looks under `~/.config/`) or set `googleKeyFile` in `.seo-content.json`. |
+| `No Google service-account key configured` | Run `/site-seo --setup` (it looks under `~/.config/`) or set `googleKeyFile` in `.seo-content.json`. |
 | `SETUP NEEDED: DataForSEO is not configured` | Step 3, then restart. |
 | `DataForSEO rejected the login/password` | You used the website password; take the API password from app.dataforseo.com/api-access. |
 | `DataForSEO balance is empty` | Top up at app.dataforseo.com. |
@@ -124,7 +129,7 @@ What changed is in the [changelog](../../CHANGELOG.md).
 
 ## Per-site settings — `.seo-content.json`
 
-Template: [templates/seo-content.config.example.json](templates/seo-content.config.example.json). `/seo-gaps --setup`
+Template: [templates/seo-content.config.example.json](templates/seo-content.config.example.json). `/site-seo --setup`
 writes it for you; the fields worth knowing:
 
 | Field | Example | Meaning |
@@ -134,7 +139,7 @@ writes it for you; the fields worth knowing:
 | `locale` | `{ "location_code": 2276, "language_code": "de" }` | Market for DataForSEO: Poland 2616/`pl`, Germany 2276/`de`, UK 2826/`en`, US 2840/`en` ([all codes](https://docs.dataforseo.com/v3/dataforseo_labs/locations_and_languages/)) |
 | `brandTerms` | `["example"]` | Queries containing these are left out |
 | `competitors` | `["rival.com"]` | Used by `competitor_gap` (paid) |
-| `blog.*` | language, audience, voice, wordCount, cta | How `/blog-draft` writes |
+| `blog.*` | language, audience, voice, wordCount, cta | How `/site-blog` writes |
 
 ## Your keys stay yours
 

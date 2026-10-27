@@ -1,5 +1,19 @@
 # Changelog
 
+## site-seo 0.7.0 — 2026-10-27
+- **Renamed from `seo-content`**, so the web plugins share one prefix: `/site-audit`, `/site-seo`, `/site-responsive`. The skills are now `/site-seo` (was `/seo-gaps`) and `/site-blog` (was `/blog-draft`); the MCP server is `site-seo`. Reports are named `site-seo-<date>.md`.
+- Unchanged for compatibility: the per-repo `.seo-content.json`, keys under `~/.config/seo-content/`, and the template `seo-content.config.example.json`.
+- Switching: `/plugin install site-seo@kkuklewski`, `/plugin uninstall seo-content@kkuklewski`, then re-enter the optional DataForSEO login and the default Google key path via `/plugin configure site-seo@kkuklewski` (plugin settings are stored per plugin name), and restart Claude Code.
+
+## seo-content — deprecated 2026-10-27
+- Replaced by `site-seo`. The catalog entry stays, pinned to the tag `seo-content-v0.6.1` (the last commit before the rename), so existing installs keep working; it gets no new features.
+
+## site-responsive 0.1.0 — 2026-10-27
+- New plugin `/site-responsive`: responsive fix loop for a web page. Visual pass on several devices in Responsively App (through its MCP server, optional), then a bundled Playwright sweep in Chromium and WebKit at 280, 375, 393, 768, 1024 and 1440 px (more with `SWEEP_WIDTHS`) that measures horizontal overflow, elements past the viewport, clipped text, text hidden on load or still hidden after a full scroll, tap targets under 24 px and broken images. Fixes the findings without changing copy, then re-sweeps until every number is 0 or an explained exception. `--report-only` measures without editing.
+
+## site-audit 0.2.4 — 2026-10-27
+- Points to `/site-responsive` for the deeper responsive fix loop and to `site-seo` for content opportunities.
+
 ## simple-brain-kit 0.2.0 — 2026-10-20
 - **Architecture: core plus swappable adapters.** A "How the pieces fit" section with one diagram at the top of the skill and the README, and `references/architecture.md` with the contracts. The core is the Markdown vault in git and one MCP gateway with a read connector and an append-only capture connector; the task tracker, vector store, notifications and web discovery are adapters the owner picks at setup (the skill asks which ones they use). Replacing an adapter never changes the vault format or the decisions.
 - **Capture kind `review`** (`target` + `verdict` read|reject). The read connector flags the note at once (`read`, plus `vetoed` for a reject) and `recent` hides it unless `include_read` is set. The curate playbook applies reviews before the veto check: `owner_read`, the veto fields on raw items, `rag_dismissed` on captures, withdrawal of a topic page whose sources are all vetoed. Per-item cards skip notes with `owner_read`.

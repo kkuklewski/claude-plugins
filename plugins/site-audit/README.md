@@ -37,6 +37,9 @@ Works in any Claude Code: terminal, IDE, SSH, CI. The optional interactive pass 
 several widths, 200 % text) uses the Claude desktop app's built-in browser; elsewhere it is skipped and those rows
 are reported as manual checks. `--quick` skips it everywhere.
 
+For the responsive fix loop page by page (Responsively App + a Chromium/WebKit sweep from 280 to 1440 px), use
+[site-responsive](../site-responsive); for content opportunities from Search Console, [site-seo](../site-seo).
+
 ## Per-project config
 
 Optional `.site-audit.json` in the project root — ignored folders, private routes, extra sample pages,

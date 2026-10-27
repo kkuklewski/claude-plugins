@@ -5,7 +5,7 @@ secondary_keywords: []
 intent: informational    # informational | commercial | transactional | navigational
 action: new-post         # new-post | new-section | refresh
 target_url: ""           # proposed slug, or the existing page for new-section/refresh
-source: seo-gaps YYYY-MM-DD
+source: site-seo YYYY-MM-DD
 ---
 
 # Brief: <working title>
@@ -28,7 +28,7 @@ source: seo-gaps YYYY-MM-DD
 
 ## Term plan
 <!-- term_plan for the primary keyword (DataForSEO): what the current top-10 pages share. A coverage checklist
-     for the writer, not a quota — /blog-draft scores the draft against it. Or: "not checked — DataForSEO off".
+     for the writer, not a quota — /site-blog scores the draft against it. Or: "not checked — DataForSEO off".
      If the top-10 is a different page type than this brief (e.g. city landing pages for a guide), say so here. -->
 - **Length:** ~N words (competitors min–max), ~N H2 / ~N H3
 - **Exact keyword** used by N/N pages

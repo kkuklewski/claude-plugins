@@ -1,4 +1,4 @@
-// Data clients for seo-content: Google Search Console, GA4 Data API, DataForSEO.
+// Data clients for site-seo: Google Search Console, GA4 Data API, DataForSEO.
 // Zero dependencies (Node >= 22). Credentials come from the caller (env of the MCP process),
 // never from files in the project repo.
 import { createSign } from 'node:crypto';
@@ -28,7 +28,7 @@ const tokenCache = new Map();
 
 export async function loadServiceAccount(path) {
   if (!path) throw new SetupError('No Google service-account key configured.',
-    'Set "googleKeyFile" in this repo\'s .seo-content.json to the path of the client\'s JSON key (e.g. ~/.config/<client>/sa.json), or set a default key via /plugin configure seo-content@kkuklewski.');
+    'Set "googleKeyFile" in this repo\'s .seo-content.json to the path of the client\'s JSON key (e.g. ~/.config/<client>/sa.json), or set a default key via /plugin configure site-seo@kkuklewski.');
   if (!path.endsWith('.json')) throw new SetupError(`Key file must be a .json file: ${path}`, 'Use the JSON key downloaded from Google Cloud → IAM → Service accounts → Keys.');
   let text, sa;
   try { text = await readFile(path, 'utf8'); }
@@ -130,7 +130,7 @@ export function dfsConfigured(login, password) { return Boolean(login && passwor
 
 export function assertDfs(login, password) {
   if (!dfsConfigured(login, password)) throw new SetupError('DataForSEO is not configured (optional).',
-    'Competitor/volume data is off. To enable it, create your own DataForSEO account and set login + password under /plugin → seo-content → Configure.');
+    'Competitor/volume data is off. To enable it, create your own DataForSEO account and set login + password under /plugin → site-seo → Configure.');
 }
 
 async function dfs(login, password, path, task) {

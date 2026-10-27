@@ -73,6 +73,8 @@ Only what scripts can't judge — on the home page (shared layout) plus any temp
 - **Visual sweep** at 320 / 768 / 1440 (+1920 for wide layouts) on templates where `pages.md` shows overflow or
   small targets, else home + one content template. Before any screenshot: `scrollIntoView` the area and wait ~1 s —
   lazy images paint late (a blank box is usually timing, not a bug). Reset with `resize_window preset: desktop`.
+  For a deeper responsive pass (Chromium + WebKit from 280 to 1440 px, hidden-on-load content, fix loop) recommend
+  `/site-responsive` (plugin `site-responsive@kkuklewski`) in the report instead of doing it here.
 - **200 % text:** `document.documentElement.style.fontSize='200%'` → screenshot → nothing clipped → reset.
 - Pitfall: with `srcset`, `img.naturalWidth` is density-scaled — judge served size from `?w=` / the network, not naturalWidth.
 - When pasting `dom-audit.js` into the in-app browser, press Tab once first — without a keyboard event Chrome

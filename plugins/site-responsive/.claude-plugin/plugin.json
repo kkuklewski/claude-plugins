@@ -1,0 +1,22 @@
+{
+  "name": "site-responsive",
+  "description": "Responsive QA loop for a web page: visual pass in Responsively, then a Chromium + WebKit sweep (280 to 1440 px) that measures overflow, clipped text, content hidden on load and small tap targets, fixes, and re-sweeps until clean.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Kamil Kuklewski",
+    "url": "https://github.com/kkuklewski"
+  },
+  "homepage": "https://github.com/kkuklewski/claude-plugins/tree/main/plugins/site-responsive",
+  "repository": "https://github.com/kkuklewski/claude-plugins",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "web",
+    "responsive",
+    "mobile",
+    "playwright",
+    "webkit",
+    "qa"
+  ]
+}

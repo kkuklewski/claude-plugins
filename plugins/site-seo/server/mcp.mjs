@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// seo-content MCP server — minimal stdio JSON-RPC, zero dependencies (Node >= 22).
+// site-seo MCP server — minimal stdio JSON-RPC, zero dependencies (Node >= 22).
 // Credentials arrive as env vars that Claude Code fills from the plugin's userConfig
 // (the key file path and DataForSEO login/password live on each user's own machine,
 // sensitive values in their OS keychain). Nothing here is shared between users.
@@ -56,7 +56,7 @@ const TOOLS = [
       }
       out.dataforseo = dfsConfigured(dfsLogin(), dfsPassword())
         ? { status: 'configured', note: 'Credentials present; validated on first paid call.' }
-        : { status: 'off', note: 'Optional. Competitor gaps, search volume and SERP snapshots are disabled.', fix: 'Set DataForSEO login + password via /plugin configure seo-content@kkuklewski.' };
+        : { status: 'off', note: 'Optional. Competitor gaps, search volume and SERP snapshots are disabled.', fix: 'Set DataForSEO login + password via /plugin configure site-seo@kkuklewski.' };
       return out;
     },
   },
@@ -278,7 +278,7 @@ async function handle(req) {
     return send({ id, result: {
       protocolVersion: params.protocolVersion || '2025-06-18',
       capabilities: { tools: {} },
-      serverInfo: { name: 'seo-content', version: '0.6.1' },
+      serverInfo: { name: 'site-seo', version: '0.7.0' },
     } });
   }
   if (method === 'tools/list') return send({ id, result: { tools: TOOLS.map(({ run, ...t }) => t) } });
